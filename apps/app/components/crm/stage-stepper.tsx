@@ -5,7 +5,11 @@ import { cn } from "@crm/ui/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MatterStageIndicator } from "@/components/crm/matter-stage";
-import { matterStageLabel, isClosedStage, OPEN_STAGES } from "@/lib/matter-stage";
+import {
+	isClosedStage,
+	matterStageLabel,
+	OPEN_STAGES,
+} from "@/lib/matter-stage";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 

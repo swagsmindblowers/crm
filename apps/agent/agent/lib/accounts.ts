@@ -530,11 +530,7 @@ export async function readMatterHistory(
 }
 
 function isOpen(stage: string): boolean {
-	return (
-		stage !== "GRANTED" &&
-		stage !== "REFUSED" &&
-		stage !== "WITHDRAWN"
-	);
+	return stage !== "GRANTED" && stage !== "REFUSED" && stage !== "WITHDRAWN";
 }
 
 async function recentNotes(

@@ -161,10 +161,11 @@ export async function runConflictCheck(
 					id: party.matter.id,
 					label: party.matter.name,
 					matchedOn: "relatedParty",
-					detail: `${party.contact.firstName} ${party.contact.lastName ?? ""} is on this matter as ${party.role}.`.replace(
-						/\s+/g,
-						" ",
-					),
+					detail:
+						`${party.contact.firstName} ${party.contact.lastName ?? ""} is on this matter as ${party.role}.`.replace(
+							/\s+/g,
+							" ",
+						),
 				});
 			}
 		}

@@ -1,9 +1,5 @@
 import Warning from "@carbon/icons-react/es/Warning";
-import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-} from "@crm/ui/components/alert";
+import { Alert, AlertDescription, AlertTitle } from "@crm/ui/components/alert";
 import { Badge } from "@crm/ui/components/badge";
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
 import { SimpleTable, SimpleTableRow } from "@crm/ui/components/simple-table";
@@ -37,7 +33,9 @@ export default function IntakeConnectionPage(
 	);
 }
 
-async function IntakeConnectionPageContent({}: PageProps<"/[slug]/settings/connections/intake">) {
+async function IntakeConnectionPageContent(
+	_props: PageProps<"/[slug]/settings/connections/intake">,
+) {
 	await requireSession();
 
 	const queryClient = getServerQueryClient();

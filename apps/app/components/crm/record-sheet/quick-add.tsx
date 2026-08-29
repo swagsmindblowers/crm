@@ -170,7 +170,9 @@ export function AttachMatterContact({
 	const personId = useId();
 	const roleId = useId();
 
-	const options = useQuery(trpc.matters.contactOptions.queryOptions({ matterId }));
+	const options = useQuery(
+		trpc.matters.contactOptions.queryOptions({ matterId }),
+	);
 	const candidates = options.data ?? [];
 
 	const attach = useMutation(

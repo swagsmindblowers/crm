@@ -1,10 +1,10 @@
 import {
 	ActivityType,
 	type Db,
-	MatterStage,
 	EnrichmentStatus,
 	FactBand,
 	FactStatus,
+	MatterStage,
 	RecordSource,
 } from "@crm/db";
 import { RETIRED_OUTCOME } from "@crm/db/agent-tasks";

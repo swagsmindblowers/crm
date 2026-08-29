@@ -1,4 +1,10 @@
-import { ActivityType, type Db, MatterStage, Prisma, RecordSource } from "@crm/db";
+import {
+	ActivityType,
+	type Db,
+	MatterStage,
+	Prisma,
+	RecordSource,
+} from "@crm/db";
 import { checklistTemplateFor } from "@crm/validation/document-checklists";
 import {
 	matchServiceType,
@@ -62,7 +68,11 @@ export class IntakeService {
 					select: { id: true },
 				});
 				if (matter) {
-					return { filed: true, contactId: filed.contactId, matterId: matter.id };
+					return {
+						filed: true,
+						contactId: filed.contactId,
+						matterId: matter.id,
+					};
 				}
 			}
 			return { filed: false, reason: "Already processed" };

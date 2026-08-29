@@ -1,4 +1,4 @@
-import { MatterStage, EnrichmentStatus, RecordSource } from "@crm/db";
+import { EnrichmentStatus, MatterStage, RecordSource } from "@crm/db";
 import { FIELD_TYPES } from "@crm/db/fields";
 import { z } from "zod";
 import { bulkIdsInput } from "../crm/bulk";

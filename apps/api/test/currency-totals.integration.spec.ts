@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { MatterStage, db, RateSource } from "@crm/db";
+import { db, MatterStage, RateSource } from "@crm/db";
 import { normalizeCurrency } from "@crm/db/currency";
 import { SETTINGS_ID, writeReportingCurrency } from "@crm/db/settings";
 import type { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
 import { DashboardService } from "../src/dashboard/dashboard.service";
-import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "currency-totals-spec";
@@ -493,7 +493,9 @@ describe("the dashboard only values what it can convert", () => {
 		expect(summary.performance.avgMatterCents).toBe(10_000);
 		expect(summary.unconverted.count).toBe(1);
 
-		await db.matter.deleteMany({ where: { id: { in: [won.id, unvalued.id] } } });
+		await db.matter.deleteMany({
+			where: { id: { in: [won.id, unvalued.id] } },
+		});
 	});
 
 	it("does not let a stale figure set the largest open matter", async () => {
@@ -516,6 +518,8 @@ describe("the dashboard only values what it can convert", () => {
 				?.baseAmountCents,
 		).toBeNull();
 
-		await db.matter.deleteMany({ where: { id: { in: [open.id, unvalued.id] } } });
+		await db.matter.deleteMany({
+			where: { id: { in: [open.id, unvalued.id] } },
+		});
 	});
 });

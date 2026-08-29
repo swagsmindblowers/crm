@@ -12,6 +12,7 @@ import type { AuthedTrpcContext } from "../trpc/context.types";
 import { AuthMiddleware } from "../trpc/middlewares/auth.middleware";
 import { restMeta } from "../trpc/openapi";
 import {
+	matterAddKeyDateInput,
 	matterAttachContactInput,
 	matterBulkInput,
 	matterBulkOwnerInput,
@@ -22,7 +23,6 @@ import {
 	matterContactRoleInput,
 	matterContactRoleOutput,
 	matterContactsInput,
-	matterAddKeyDateInput,
 	matterCreateInput,
 	matterCreateOutput,
 	matterDetachContactInput,
@@ -30,10 +30,10 @@ import {
 	matterIdInput,
 	matterKeyDateMutateOutput,
 	matterKeyDateRemovedOutput,
-	matterRemoveKeyDateInput,
 	matterListInput,
 	matterListOutput,
 	matterMutateOutput,
+	matterRemoveKeyDateInput,
 	matterSetStageOutput,
 	matterUpdateArgs,
 	setStageInput,
@@ -43,7 +43,9 @@ import { MattersService } from "./matters.service";
 @Router({ alias: "matters" })
 @UseMiddlewares(AuthMiddleware)
 export class MattersRouter {
-	constructor(@Inject(MattersService) private readonly matters: MattersService) {}
+	constructor(
+		@Inject(MattersService) private readonly matters: MattersService,
+	) {}
 
 	@Query({
 		input: matterListInput,
@@ -134,16 +136,22 @@ export class MattersRouter {
 		output: matterContactLinkOutput,
 		meta: restMeta("POST", "/matters/{matterId}/contacts", ["Matters"]),
 	})
-	async attachContact(@Input() input: z.infer<typeof matterAttachContactInput>) {
+	async attachContact(
+		@Input() input: z.infer<typeof matterAttachContactInput>,
+	) {
 		return this.matters.attachContact(input);
 	}
 
 	@Mutation({
 		input: matterDetachContactInput,
 		output: matterContactLinkOutput,
-		meta: restMeta("DELETE", "/matters/{matterId}/contacts/{contactId}", ["Matters"]),
+		meta: restMeta("DELETE", "/matters/{matterId}/contacts/{contactId}", [
+			"Matters",
+		]),
 	})
-	async detachContact(@Input() input: z.infer<typeof matterDetachContactInput>) {
+	async detachContact(
+		@Input() input: z.infer<typeof matterDetachContactInput>,
+	) {
 		return this.matters.detachContact(input);
 	}
 
@@ -174,7 +182,9 @@ export class MattersRouter {
 			"Matters",
 		]),
 	})
-	async removeKeyDate(@Input() input: z.infer<typeof matterRemoveKeyDateInput>) {
+	async removeKeyDate(
+		@Input() input: z.infer<typeof matterRemoveKeyDateInput>,
+	) {
 		return this.matters.removeKeyDate(input);
 	}
 

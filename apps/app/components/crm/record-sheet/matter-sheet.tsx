@@ -7,25 +7,16 @@ import UserMultiple from "@carbon/icons-react/es/UserMultiple";
 import WarningAlt from "@carbon/icons-react/es/WarningAlt";
 import { CURRENCIES, normalizeCurrency } from "@crm/db/currency";
 import type { FieldValueJson } from "@crm/db/fields";
-import {
-	MATTER_SERVICES,
-	serviceDefaultFeeCents,
-	serviceLabel,
-} from "@crm/validation/matter-services";
-import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-} from "@crm/ui/components/alert";
+import { Alert, AlertDescription, AlertTitle } from "@crm/ui/components/alert";
 import { Button } from "@crm/ui/components/button";
 import { Checkbox } from "@crm/ui/components/checkbox";
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
-import { Input } from "@crm/ui/components/input";
 import {
 	EntityLogo,
 	type EntityLogoTone,
 } from "@crm/ui/components/entity-logo";
 import { Icon } from "@crm/ui/components/icon";
+import { Input } from "@crm/ui/components/input";
 import { PersonAvatar } from "@crm/ui/components/person-avatar";
 import { SimpleTable, SimpleTableRow } from "@crm/ui/components/simple-table";
 import { TableCell } from "@crm/ui/components/table";
@@ -35,6 +26,11 @@ import {
 	TooltipTrigger,
 } from "@crm/ui/components/tooltip";
 import { formatMoney } from "@crm/ui/lib/format";
+import {
+	MATTER_SERVICES,
+	serviceDefaultFeeCents,
+	serviceLabel,
+} from "@crm/validation/matter-services";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AgentPanel } from "@/components/crm/agent-panel";
@@ -216,7 +212,9 @@ export function MatterSheet({ matterId }: { matterId: string }) {
 				matter ? (
 					<button
 						type="button"
-						onClick={() => openRecord({ kind: "company", id: matter.company.id })}
+						onClick={() =>
+							openRecord({ kind: "company", id: matter.company.id })
+						}
 						className="text-foreground underline-offset-2 hover:underline"
 					>
 						{matter.company.name}
@@ -259,7 +257,10 @@ export function MatterSheet({ matterId }: { matterId: string }) {
 								<EmptyCellValue />
 							) : (
 								<span className="tabular-nums">
-									{formatMoney(matter.amountCents, matterCurrency(matter.currency))}
+									{formatMoney(
+										matter.amountCents,
+										matterCurrency(matter.currency),
+									)}
 								</span>
 							)}
 						</DetailSheetStat>
@@ -345,7 +346,8 @@ function MatterOverview({ matter }: { matter: Matter }) {
 								serviceType as (typeof MATTER_SERVICES)[number]["id"],
 							);
 							save({
-								serviceType: serviceType as (typeof MATTER_SERVICES)[number]["id"],
+								serviceType:
+									serviceType as (typeof MATTER_SERVICES)[number]["id"],
 								...(matter.amountCents === null && fee !== null
 									? { amountCents: fee }
 									: {}),
@@ -355,7 +357,9 @@ function MatterOverview({ matter }: { matter: Matter }) {
 					<InlineField
 						label="Agreed fee (excl. VAT)"
 						value={
-							matter.amountCents === null ? null : String(matter.amountCents / 100)
+							matter.amountCents === null
+								? null
+								: String(matter.amountCents / 100)
 						}
 						placeholder="2500"
 						saving={isSaving("amountCents")}
@@ -481,7 +485,8 @@ function ConflictFlag({ matterId }: { matterId: string }) {
 				<ul className="mt-1 space-y-0.5">
 					{flag.matches.map((match) => (
 						<li key={`${match.kind}:${match.id}:${match.matchedOn}`}>
-							<span className="font-medium">{match.label}</span> — {match.detail}
+							<span className="font-medium">{match.label}</span> —{" "}
+							{match.detail}
 						</li>
 					))}
 				</ul>
@@ -629,7 +634,9 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
 
-	const query = useQuery(trpc.documentChecklist.list.queryOptions({ matterId }));
+	const query = useQuery(
+		trpc.documentChecklist.list.queryOptions({ matterId }),
+	);
 
 	const update = useMutation(
 		trpc.documentChecklist.update.mutationOptions({

@@ -7,7 +7,12 @@ import { contactsSearchParams } from "@/app/(app)/[slug]/contacts/contacts-searc
 import { mattersSearchParams } from "@/app/(app)/[slug]/matters/matters-search-params";
 import { useTRPC } from "@/lib/trpc/client";
 
-export type Section = "/" | "/companies" | "/contacts" | "/matters" | "/settings";
+export type Section =
+	| "/"
+	| "/companies"
+	| "/contacts"
+	| "/matters"
+	| "/settings";
 
 export function usePrefetchSection(): (section: string) => void {
 	const trpc = useTRPC();

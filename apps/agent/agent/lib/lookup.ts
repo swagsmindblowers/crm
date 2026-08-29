@@ -1,4 +1,4 @@
-import { MatterStage, db } from "@crm/db";
+import { db, MatterStage } from "@crm/db";
 import { LOSING_MATTER_STAGES, OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import { domainOf, normalise } from "./names";
 

@@ -15,8 +15,8 @@ import type { FaviconService } from "../src/companies/favicon.service";
 import { ContactsService } from "../src/contacts/contacts.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "fields-spec";
@@ -614,11 +614,15 @@ describe("a record update that fails", () => {
 		}
 		expect(refused).not.toBeNull();
 
-		expect(await db.fieldValue.count({ where: { matterId: matter.id } })).toBe(0);
+		expect(await db.fieldValue.count({ where: { matterId: matter.id } })).toBe(
+			0,
+		);
 
 		await matters.update(matter.id, { fields: { spec_risk: "Champion left" } });
 
-		expect(await db.fieldValue.count({ where: { matterId: matter.id } })).toBe(1);
+		expect(await db.fieldValue.count({ where: { matterId: matter.id } })).toBe(
+			1,
+		);
 	});
 });
 

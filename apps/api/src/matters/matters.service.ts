@@ -6,13 +6,13 @@ import {
 	Prisma as PrismaNamespace,
 } from "@crm/db";
 import { normalizeCurrency } from "@crm/db/currency";
+import type { FieldDefinitionWithOptions } from "@crm/db/fields";
 import {
 	CLOSED_MATTER_STAGES,
 	isClosedStage,
 	LOSING_MATTER_STAGES,
 	OPEN_MATTER_STAGES,
 } from "@crm/db/matter-stage";
-import type { FieldDefinitionWithOptions } from "@crm/db/fields";
 import { checklistTemplateFor } from "@crm/validation/document-checklists";
 import { serviceDefaultFeeCents } from "@crm/validation/matter-services";
 import {
@@ -394,7 +394,11 @@ export class MattersService {
 				return created;
 			});
 
-			this.logger.log({ message: "Matter created", matterId: matter.id, stage });
+			this.logger.log({
+				message: "Matter created",
+				matterId: matter.id,
+				stage,
+			});
 
 			void this.fields.queueBackfillForNewRecord("MATTER", matter.id);
 			void this.agent.conflictCheckRequested(
@@ -647,7 +651,11 @@ export class MattersService {
 				type: "matter.stage.changed",
 				record: { kind: "matter", id: matter.id },
 				occurredAt: now,
-				data: { companyId: matter.companyId, from: matter.stage, to: input.stage },
+				data: {
+					companyId: matter.companyId,
+					from: matter.stage,
+					to: input.stage,
+				},
 			});
 			if (!isClosedStage(matter.stage) && closed) {
 				await emit({
@@ -683,7 +691,10 @@ export class MattersService {
 
 		const { matter, updated, now } = transition;
 
-		await this.stamp.touch({ companyId: matter.companyId, matterId: matter.id }, now);
+		await this.stamp.touch(
+			{ companyId: matter.companyId, matterId: matter.id },
+			now,
+		);
 
 		this.logger.log({
 			message: "Matter stage changed",
@@ -909,11 +920,17 @@ export class MattersService {
 		};
 
 		const [owners, stages, fieldFacets, ...closingCounts] = await Promise.all([
-			this.db.matter.groupBy({ by: ["ownerId"], where, _count: { _all: true } }),
+			this.db.matter.groupBy({
+				by: ["ownerId"],
+				where,
+				_count: { _all: true },
+			}),
 			this.db.matter.groupBy({ by: ["stage"], where, _count: { _all: true } }),
 			this.fields.filterFacetCounts("MATTER", where, filterableFields),
 			...CLOSING_WINDOWS.map((window) =>
-				this.db.matter.count({ where: { AND: [where, closingFilter(window)] } }),
+				this.db.matter.count({
+					where: { AND: [where, closingFilter(window)] },
+				}),
 			),
 		]);
 

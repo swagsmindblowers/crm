@@ -23,7 +23,9 @@ export function usePrefetchRecord() {
 					);
 					return;
 				case "matter":
-					void queryClient.prefetchQuery(trpc.matters.byId.queryOptions({ id }));
+					void queryClient.prefetchQuery(
+						trpc.matters.byId.queryOptions({ id }),
+					);
 					return;
 			}
 		},

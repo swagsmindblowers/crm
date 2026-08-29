@@ -75,7 +75,9 @@ export function SlackChannels() {
 		<section className="flex flex-col gap-3 px-(--spacing-block-inline)">
 			<div className="flex items-end justify-between gap-4">
 				<div>
-					<h2 className="font-medium text-sm">Channels MyLegalXpert can reach</h2>
+					<h2 className="font-medium text-sm">
+						Channels MyLegalXpert can reach
+					</h2>
 					<p className="text-muted-foreground text-xs">
 						Agents pick from this list.
 					</p>
@@ -92,7 +94,8 @@ export function SlackChannels() {
 
 			{channels.stalled ? (
 				<p className="text-warning text-xs">
-					MyLegalXpert is not reading Slack right now. The list can be out of date.
+					MyLegalXpert is not reading Slack right now. The list can be out of
+					date.
 				</p>
 			) : null}
 

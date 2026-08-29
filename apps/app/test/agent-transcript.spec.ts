@@ -4,10 +4,10 @@ import type { EveToolInput, EveToolOutput } from "@crm/validation/eve-tool";
 import type { EveMessage } from "eve/react";
 import {
 	conversationTimeline,
-	matterListResultOf,
 	describe as describeStep,
 	eventStreamSettled,
 	latestTurnFailure,
+	matterListResultOf,
 	mergeMatterListResultPages,
 	NEW_THREAD,
 	outcomeTone,
@@ -229,9 +229,13 @@ describe("matter list presentation", () => {
 		const second = matterListResultOf({
 			...output,
 			asOf: "2026-08-06T01:15:00.000Z",
-			matters: [matter, { ...matter, id: "matter-2", name: "Linear — Comp AI" }],
+			matters: [
+				matter,
+				{ ...matter, id: "matter-2", name: "Linear — Comp AI" },
+			],
 		});
-		if (!first || !second) throw new Error("Expected valid matter list results");
+		if (!first || !second)
+			throw new Error("Expected valid matter list results");
 
 		expect(mergeMatterListResultPages([first, second])).toMatchObject([
 			{
@@ -248,7 +252,8 @@ describe("matter list presentation", () => {
 			...output,
 			criteria: { ...output.criteria, companyId: "company-1" },
 		});
-		if (!open || !company) throw new Error("Expected valid matter list results");
+		if (!open || !company)
+			throw new Error("Expected valid matter list results");
 
 		expect(mergeMatterListResultPages([open, company])).toMatchObject([
 			{ criteria: { companyId: null }, matters: [{ id: "matter-1" }] },

@@ -49,7 +49,8 @@ const hasExactlyOneRecord = (input: {
 	companyId?: string;
 	matterId?: string;
 }) =>
-	[input.contactId, input.companyId, input.matterId].filter(Boolean).length === 1;
+	[input.contactId, input.companyId, input.matterId].filter(Boolean).length ===
+	1;
 
 const recordMessage = "Choose exactly one contact, company or matter.";
 

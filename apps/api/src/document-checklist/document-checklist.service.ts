@@ -1,9 +1,5 @@
 import { type Db, DocumentChecklistStatus } from "@crm/db";
-import {
-	Injectable,
-	Logger,
-	NotFoundException,
-} from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { blankToNull } from "../crm/values";
 import { InjectDatabase } from "../database/database.constants";
 import type {

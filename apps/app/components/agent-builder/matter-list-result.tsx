@@ -32,7 +32,11 @@ const COLUMNS: SimpleTableColumn[] = [
 	{ id: "idle", header: "Idle", width: "w-[8%]", align: "right" },
 ];
 
-export function MatterListResultTable({ result }: { result: MatterListResult }) {
+export function MatterListResultTable({
+	result,
+}: {
+	result: MatterListResult;
+}) {
 	const openRecord = useOpenRecord();
 	const prefetchRecord = usePrefetchRecord();
 	const count = result.matters.length;

@@ -10,6 +10,7 @@ import {
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
 import { useTableSelection } from "@crm/ui/hooks/use-table-selection";
 import { formatMoney } from "@crm/ui/lib/format";
+import { serviceLabel } from "@crm/validation/matter-services";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { CLOSING_OPTIONS } from "@/components/crm/closing-window";
@@ -27,7 +28,6 @@ import { MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
 import { MattersBulkActions } from "./matters-bulk-actions";
-import { serviceLabel } from "@crm/validation/matter-services";
 import { mattersSearchParams } from "./matters-search-params";
 
 type MatterRow = RouterOutputs["matters"]["list"]["rows"][number];

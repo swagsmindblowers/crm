@@ -68,7 +68,10 @@ export class IntakeController {
 
 		const parsed = intakeSubmission.safeParse(body);
 		if (!parsed.success) {
-			return { filed: false, reason: parsed.error.issues[0]?.message ?? "Invalid payload" };
+			return {
+				filed: false,
+				reason: parsed.error.issues[0]?.message ?? "Invalid payload",
+			};
 		}
 
 		try {

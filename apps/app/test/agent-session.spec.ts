@@ -132,7 +132,9 @@ describe("record context", () => {
 	});
 
 	it("files a conversation under one record and no other", () => {
-		expect(recordFilter({ kind: "matter", id: "d1" })).toEqual({ matterId: "d1" });
+		expect(recordFilter({ kind: "matter", id: "d1" })).toEqual({
+			matterId: "d1",
+		});
 		expect(Object.keys(recordFilter({ kind: "company", id: "co1" }))).toEqual([
 			"companyId",
 		]);

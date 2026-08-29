@@ -31,7 +31,10 @@ afterEach(() => {
 
 describe("creating a Slack channel", () => {
 	it("returns the channel the agent created", async () => {
-		agentAnswers(200, JSON.stringify({ channel: { id: "C1", name: "matters" } }));
+		agentAnswers(
+			200,
+			JSON.stringify({ channel: { id: "C1", name: "matters" } }),
+		);
 
 		expect(await service.create("matters", false)).toEqual({
 			channel: { id: "C1", name: "matters" },

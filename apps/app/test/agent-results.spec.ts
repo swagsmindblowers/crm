@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { anchorResults } from "../lib/agent-results";
 import {
+	groupMatterListPages,
 	type MatterListResult,
 	matterListResultOf,
-	groupMatterListPages,
 	type TranscriptItem,
 } from "../lib/agent-transcript";
 

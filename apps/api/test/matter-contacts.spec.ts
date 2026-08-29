@@ -3,8 +3,8 @@ import { db } from "@crm/db";
 import type { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "matter-contacts-spec";
@@ -139,7 +139,11 @@ describe("bringing a contact onto a matter", () => {
 	});
 
 	it("blanks a role rather than storing an empty string", async () => {
-		await matters.setContactRole({ matterId, contactId: championId, role: "  " });
+		await matters.setContactRole({
+			matterId,
+			contactId: championId,
+			role: "  ",
+		});
 
 		const matter = await matters.byId(matterId);
 

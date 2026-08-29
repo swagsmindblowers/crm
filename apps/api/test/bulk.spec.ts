@@ -8,8 +8,8 @@ import type { FaviconService } from "../src/companies/favicon.service";
 import { ContactsService } from "../src/contacts/contacts.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
 const suffix = process.env.TEST_RUN_ID ?? "bulk-spec";
@@ -294,9 +294,9 @@ describe("moving a selection of matters to a stage", () => {
 		});
 
 		expect(closed.every((matter) => matter.stage === "REFUSED")).toBe(true);
-		expect(closed.every((matter) => matter.closedReason === "Budget pulled")).toBe(
-			true,
-		);
+		expect(
+			closed.every((matter) => matter.closedReason === "Budget pulled"),
+		).toBe(true);
 		expect(closed.every((matter) => matter.closedAt !== null)).toBe(true);
 
 		expect(

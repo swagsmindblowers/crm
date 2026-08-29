@@ -159,13 +159,17 @@ export function DashboardSummary() {
 									<SimpleTableRow
 										key={matter.id}
 										clickable
-										onClick={() => openRecord({ kind: "matter", id: matter.id })}
+										onClick={() =>
+											openRecord({ kind: "matter", id: matter.id })
+										}
 									>
 										<TableCell className={CELL}>
 											<MatterCell
 												name={matter.name}
 												company={matter.company}
-												meta={<LocalRelativeTime date={matter.stageChangedAt} />}
+												meta={
+													<LocalRelativeTime date={matter.stageChangedAt} />
+												}
 											/>
 										</TableCell>
 										<TableCell className={`${CELL} hidden lg:table-cell`}>
@@ -175,7 +179,8 @@ export function DashboardSummary() {
 											<ValueMeter
 												share={
 													largestOpenCents > 0
-														? ((matter.baseAmountCents ?? 0) / largestOpenCents) *
+														? ((matter.baseAmountCents ?? 0) /
+																largestOpenCents) *
 															100
 														: 0
 												}

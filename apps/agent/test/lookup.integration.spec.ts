@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { MatterStage, db } from "@crm/db";
+import { db, MatterStage } from "@crm/db";
 import { listMatters, searchCrm } from "../agent/lib/lookup";
 
 const suffix = process.env.TEST_RUN_ID ?? "lookup-spec";
@@ -212,7 +212,9 @@ describe("listMatters", () => {
 		expect(ids).toContain(matterId);
 		expect(ids).not.toContain(freshMatterId);
 		expect(ids).not.toContain(closedMatterId);
-		expect(result.matters.find((matter) => matter.id === matterId)).toMatchObject({
+		expect(
+			result.matters.find((matter) => matter.id === matterId),
+		).toMatchObject({
 			daysSinceLastActivity: 65,
 			neverActive: false,
 			company: {

@@ -53,8 +53,8 @@ import {
 	type DetailSheetTab,
 } from "@/components/detail-sheet";
 import { LocalDay } from "@/components/local-date-time";
-import { OPEN_STAGES } from "@/lib/matter-stage";
 import { ENRICHMENT_POLL_MS, isEnriching } from "@/lib/enrichment-status";
+import { OPEN_STAGES } from "@/lib/matter-stage";
 import { savingField } from "@/lib/pending-field";
 import { hasCompanyLinks } from "@/lib/social-links";
 import { useCrmCache } from "@/lib/trpc/cache";
@@ -64,8 +64,8 @@ import { QuickAddContact, QuickAddMatter } from "./quick-add";
 import { RecordActions } from "./record-actions";
 import {
 	AddRow,
-	MatterAmount,
 	DomainLink,
+	MatterAmount,
 	MetaLine,
 	RecordSheetFrame,
 } from "./record-parts";
@@ -158,7 +158,8 @@ export function CompanySheet({ companyId }: { companyId: string }) {
 		: null;
 
 	const openMatters =
-		company?.matters.filter((matter) => OPEN_STAGES.includes(matter.stage)) ?? [];
+		company?.matters.filter((matter) => OPEN_STAGES.includes(matter.stage)) ??
+		[];
 	const openValueCents = openMatters.reduce(
 		(total, matter) => total + (matter.baseAmountCents ?? 0),
 		0,

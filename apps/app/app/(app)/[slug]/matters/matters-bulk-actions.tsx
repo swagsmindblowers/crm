@@ -33,7 +33,7 @@ import {
 	BulkOwnerMenu,
 	reportBulk,
 } from "@/components/crm/bulk-actions";
-import { MATTER_STAGE_OPTIONS, LOSING_STAGES } from "@/lib/matter-stage";
+import { LOSING_STAGES, MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 

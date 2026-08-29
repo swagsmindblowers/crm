@@ -93,7 +93,8 @@ export class CurrencyService {
 					};
 				})
 				.sort(
-					(a, b) => b.matters - a.matters || a.currency.localeCompare(b.currency),
+					(a, b) =>
+						b.matters - a.matters || a.currency.localeCompare(b.currency),
 				),
 			unconverted,
 			catalog: [...CURRENCIES],

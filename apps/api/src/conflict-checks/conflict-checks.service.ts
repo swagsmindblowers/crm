@@ -26,9 +26,7 @@ function serialize(row: CheckRow) {
 	return {
 		id: row.id,
 		status: row.status,
-		matches: (Array.isArray(row.matches)
-			? row.matches
-			: []) as ConflictMatch[],
+		matches: (Array.isArray(row.matches) ? row.matches : []) as ConflictMatch[],
 		checkedAt: row.checkedAt.toISOString(),
 		dismissedAt: row.dismissedAt?.toISOString() ?? null,
 		dismissedNote: row.dismissedNote,

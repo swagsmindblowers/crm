@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { ActivityType, MatterStage, db, EmailDirection } from "@crm/db";
+import { ActivityType, db, EmailDirection, MatterStage } from "@crm/db";
 import { readCompanyHistory, readMatterHistory } from "../agent/lib/accounts";
 
 const suffix = process.env.TEST_RUN_ID ?? "accounts-spec";

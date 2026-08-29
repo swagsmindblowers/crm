@@ -5,9 +5,9 @@ import { resolveFavicon } from "../src/favicon";
 import { fieldKeyFromLabel } from "../src/fields-shape";
 import {
 	ActivityType,
-	MatterStage,
 	type FieldEntity,
 	FieldType,
+	MatterStage,
 	RateSource,
 } from "../src/generated/prisma/enums";
 import { readReportingCurrency, SETTINGS_ID } from "../src/settings";
@@ -841,8 +841,7 @@ async function seedMatters(
 					),
 					closedAt: closed ? stageChangedAt : null,
 					closedReason:
-						stage === MatterStage.REFUSED ||
-						stage === MatterStage.WITHDRAWN
+						stage === MatterStage.REFUSED || stage === MatterStage.WITHDRAWN
 							? pick(LOST_REASONS)
 							: null,
 					createdAt,
@@ -855,7 +854,9 @@ async function seedMatters(
 			);
 			for (const contact of companyContacts.slice(0, integer(1, 2))) {
 				await db.matterContact.upsert({
-					where: { matterId_contactId: { matterId: id, contactId: contact.id } },
+					where: {
+						matterId_contactId: { matterId: id, contactId: contact.id },
+					},
 					create: {
 						matterId: id,
 						contactId: contact.id,
@@ -915,7 +916,9 @@ async function seedActivities(
 	});
 
 	for (const matter of matters) {
-		const matterContacts = contacts.filter((c) => c.companyId === matter.companyId);
+		const matterContacts = contacts.filter(
+			(c) => c.companyId === matter.companyId,
+		);
 
 		for (let n = 0; n < integer(3, 6); n++) {
 			const at = daysFromNow(-integer(2, 120), 18);
@@ -945,7 +948,11 @@ async function seedActivities(
 		}
 
 		rows.push({
-			...base(matter.companyId, matter.ownerId, daysFromNow(-integer(1, 20), 12)),
+			...base(
+				matter.companyId,
+				matter.ownerId,
+				daysFromNow(-integer(1, 20), 12),
+			),
 			type: ActivityType.STAGE_CHANGE,
 			matterId: matter.id,
 			subject: "Stage changed",
@@ -968,7 +975,11 @@ async function seedActivities(
 				: daysFromNow(integer(1, 21), 6);
 
 			rows.push({
-				...base(matter.companyId, matter.ownerId, daysFromNow(-integer(1, 30), 12)),
+				...base(
+					matter.companyId,
+					matter.ownerId,
+					daysFromNow(-integer(1, 30), 12),
+				),
 				type: ActivityType.TASK,
 				matterId: matter.id,
 				subject: pick(TASK_SUBJECTS),
@@ -997,7 +1008,12 @@ async function main() {
 	const companies = await seedCompanies(ownerIds);
 	const contacts = await seedContacts(companies, ownerIds);
 	const matters = await seedMatters(companies, contacts, ownerIds);
-	const activities = await seedActivities(companies, contacts, matters, ownerIds);
+	const activities = await seedActivities(
+		companies,
+		contacts,
+		matters,
+		ownerIds,
+	);
 	const companyFields = await seedCompanyFields();
 	await seedCompanyFieldValues(companyFields, companies, ownerIds);
 

@@ -186,7 +186,9 @@ export async function queryRunCrm(
 	const companies = result.companies.filter((row) =>
 		allowed.has(`company:${row.id}`),
 	);
-	const matters = result.matters.filter((row) => allowed.has(`matter:${row.id}`));
+	const matters = result.matters.filter((row) =>
+		allowed.has(`matter:${row.id}`),
+	);
 	return {
 		...result,
 		contacts,
@@ -1090,7 +1092,10 @@ export function allowedHistorySources(
 	};
 }
 
-async function targetRecord(kind: "company" | "contact" | "matter", id: string) {
+async function targetRecord(
+	kind: "company" | "contact" | "matter",
+	id: string,
+) {
 	if (kind === "company") {
 		const company = await db.company.findUnique({
 			where: { id },

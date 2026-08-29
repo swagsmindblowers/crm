@@ -5,8 +5,8 @@ import {
 	Prisma as PrismaNamespace,
 	type RecordSource,
 } from "@crm/db";
-import { OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
+import { OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import {
 	BadRequestException,
 	ConflictException,

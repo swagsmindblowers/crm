@@ -57,8 +57,8 @@ export function CreateChannelDialog({
 				<DialogHeader>
 					<DialogTitle>Create a channel</DialogTitle>
 					<DialogDescription>
-						MyLegalXpert makes it in Slack and joins it. You can put the agent in it
-						straight after.
+						MyLegalXpert makes it in Slack and joins it. You can put the agent
+						in it straight after.
 					</DialogDescription>
 				</DialogHeader>
 

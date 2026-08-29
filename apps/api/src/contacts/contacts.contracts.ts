@@ -1,8 +1,8 @@
 import {
-	MatterStage,
 	EnrichmentStatus,
 	FactBand,
 	FactStatus,
+	MatterStage,
 	RecordSource,
 } from "@crm/db";
 import { FIELD_ENTITIES, FIELD_TYPES } from "@crm/db/fields";

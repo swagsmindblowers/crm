@@ -3,8 +3,8 @@ import { db } from "@crm/db";
 import { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 
 const suffix = crypto.randomUUID();
 const matterId = `event-matter-${suffix}`;

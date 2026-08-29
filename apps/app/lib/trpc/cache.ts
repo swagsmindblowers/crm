@@ -199,7 +199,11 @@ export function useCrmCache(): CrmCache {
 
 		matter: (id, options) =>
 			run(
-				[id ? trpc.matters.byId.queryKey({ id }) : trpc.matters.byId.queryKey()],
+				[
+					id
+						? trpc.matters.byId.queryKey({ id })
+						: trpc.matters.byId.queryKey(),
+				],
 				[
 					...listKeys(),
 					trpc.matters.contactOptions.queryKey(),

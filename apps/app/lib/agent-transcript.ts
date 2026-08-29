@@ -503,7 +503,9 @@ const matterListResult = z
 	.nullable()
 	.catch(null);
 
-export function matterListResultOf(value: EveToolOutput): MatterListResult | null {
+export function matterListResultOf(
+	value: EveToolOutput,
+): MatterListResult | null {
 	return matterListResult.parse(value);
 }
 

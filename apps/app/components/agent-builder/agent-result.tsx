@@ -3,9 +3,9 @@ import type { EveToolOutput } from "@crm/validation/eve-tool";
 import type { ReactNode } from "react";
 import { anchorResults } from "@/lib/agent-results";
 import {
+	groupMatterListPages,
 	type MatterListResult,
 	matterListResultOf,
-	groupMatterListPages,
 	type TranscriptItem,
 } from "@/lib/agent-transcript";
 import { MatterListResultTable } from "./matter-list-result";
