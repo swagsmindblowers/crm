@@ -205,6 +205,12 @@ export function useCrmCache(): CrmCache {
 					trpc.matters.contactOptions.queryKey(),
 					trpc.companies.byId.queryKey(),
 					trpc.contacts.byId.queryKey(),
+					id
+						? trpc.documentChecklist.list.queryKey({ matterId: id })
+						: trpc.documentChecklist.list.queryKey(),
+					id
+						? trpc.conflictChecks.list.queryKey({ matterId: id })
+						: trpc.conflictChecks.list.queryKey(),
 					...activityKeys(),
 					trpc.dashboard.summary.queryKey(),
 					trpc.currency.settings.queryKey(),

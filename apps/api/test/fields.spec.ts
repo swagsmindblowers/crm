@@ -35,6 +35,7 @@ const agent = {
 	companyCreated: async () => undefined,
 	companyRequested: async () => true,
 	withCrmEvents: withDiscardedCrmEvents,
+	conflictCheckRequested: async () => false,
 	fieldBackfillRecords: async (
 		entity: FieldEntity,
 		keys: string[],

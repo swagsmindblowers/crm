@@ -16,6 +16,7 @@ const domain = `money-${suffix}.test`;
 
 const agent = {
 	withCrmEvents: withDiscardedCrmEvents,
+	conflictCheckRequested: async () => false,
 } as unknown as AgentTriggerService;
 
 const conversion = new ConversionService(db);

@@ -1,5 +1,6 @@
-import { MatterStage } from "@crm/db";
+import { MatterStage, PaymentStatus } from "@crm/db";
 import { FIELD_ENTITIES, FIELD_TYPES } from "@crm/db/fields";
+import { serviceTypeId } from "@crm/validation/matter-services";
 import { z } from "zod";
 import { bulkIdsInput } from "../crm/bulk";
 import { currencyCode } from "../currency/currency.contracts";
@@ -41,11 +42,18 @@ const stageEnum = z.enum(
 	Object.values(MatterStage) as [MatterStage, ...MatterStage[]],
 );
 
+const paymentStatusEnum = z.enum(
+	Object.values(PaymentStatus) as [PaymentStatus, ...PaymentStatus[]],
+);
+
+const keyDate = z.string().nullable().optional();
+
 export const matterCreateInput = z.object({
 	name: z.string().trim().min(1, "A matter needs a name."),
 	companyId: z.string().min(1, "A matter belongs to a company."),
 	ownerId: z.string().min(1, "A matter needs an owner."),
 	stage: stageEnum.optional(),
+	serviceType: serviceTypeId.optional(),
 	amountCents,
 	currency: currencyCode.optional(),
 	expectedCloseDate: z.string().nullable().optional(),
@@ -58,9 +66,18 @@ const matterUpdateInput = z.object({
 	description: z.string().nullable().optional(),
 	companyId: z.string().optional(),
 	ownerId: z.string().optional(),
+	serviceType: serviceTypeId.optional(),
+	paymentStatus: paymentStatusEnum.optional(),
+	disbursementsNotes: z.string().nullable().optional(),
 	amountCents,
 	currency: currencyCode.optional(),
 	expectedCloseDate: z.string().nullable().optional(),
+	applicationSubmittedAt: keyDate,
+	biometricsAt: keyDate,
+	decisionDueAt: keyDate,
+	decisionReceivedAt: keyDate,
+	visaExpiresAt: keyDate,
+	conditionsExpireAt: keyDate,
 	fields: recordFieldValues.optional(),
 });
 
@@ -197,6 +214,9 @@ const matterListRowOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	stage: stageEnum,
+	serviceType: serviceTypeId,
+	paymentStatus: paymentStatusEnum,
+	decisionDueAt: z.string().nullable(),
 	currency: z.string(),
 	company: matterCompanyOutput,
 	owner: matterOwnerOutput,
@@ -224,11 +244,29 @@ export const matterListOutput = z.object({
 
 export type MatterListResult = z.infer<typeof matterListOutput>;
 
+const matterKeyDateOutput = z.object({
+	id: z.string(),
+	label: z.string(),
+	date: z.string(),
+	notes: z.string().nullable(),
+});
+
 export const matterDetailOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
 	stage: stageEnum,
+	serviceType: serviceTypeId,
+	paymentStatus: paymentStatusEnum,
+	vatExcluded: z.boolean(),
+	disbursementsNotes: z.string().nullable(),
+	applicationSubmittedAt: z.string().nullable(),
+	biometricsAt: z.string().nullable(),
+	decisionDueAt: z.string().nullable(),
+	decisionReceivedAt: z.string().nullable(),
+	visaExpiresAt: z.string().nullable(),
+	conditionsExpireAt: z.string().nullable(),
+	keyDates: z.array(matterKeyDateOutput),
 	currency: z.string(),
 	closedReason: z.string().nullable(),
 	company: matterCompanyDetailOutput,
@@ -290,6 +328,26 @@ export const matterContactRoleOutput = z.object({
 });
 
 export type MatterContactRoleResult = z.infer<typeof matterContactRoleOutput>;
+
+export const matterAddKeyDateInput = z.object({
+	matterId: z.string(),
+	label: z.string().trim().min(1, "A key date needs a label.").max(120),
+	date: z.string().min(1, "A key date needs a date."),
+	notes: z.string().trim().max(500).nullable().optional(),
+});
+
+export type MatterAddKeyDateInput = z.infer<typeof matterAddKeyDateInput>;
+
+export const matterRemoveKeyDateInput = z.object({
+	matterId: z.string(),
+	keyDateId: z.string(),
+});
+
+export type MatterRemoveKeyDateInput = z.infer<typeof matterRemoveKeyDateInput>;
+
+export const matterKeyDateMutateOutput = matterKeyDateOutput;
+
+export const matterKeyDateRemovedOutput = z.object({ id: z.string() });
 
 export const matterBulkResultOutput = z.object({
 	requested: z.number(),

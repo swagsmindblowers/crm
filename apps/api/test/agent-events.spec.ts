@@ -173,7 +173,7 @@ describe("CRM agent events", () => {
 				},
 				select: { reason: true },
 			}),
-		).toEqual([{ reason: "Add Comp AI to #matter-room" }]);
+		).toEqual([{ reason: "Add MyLegalXpert to #matter-room" }]);
 	});
 
 	it("rolls back the record when its event cannot commit", async () => {

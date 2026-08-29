@@ -22,11 +22,15 @@ import {
 	matterContactRoleInput,
 	matterContactRoleOutput,
 	matterContactsInput,
+	matterAddKeyDateInput,
 	matterCreateInput,
 	matterCreateOutput,
 	matterDetachContactInput,
 	matterDetailOutput,
 	matterIdInput,
+	matterKeyDateMutateOutput,
+	matterKeyDateRemovedOutput,
+	matterRemoveKeyDateInput,
 	matterListInput,
 	matterListOutput,
 	matterMutateOutput,
@@ -152,6 +156,26 @@ export class MattersRouter {
 	})
 	async setContactRole(@Input() input: z.infer<typeof matterContactRoleInput>) {
 		return this.matters.setContactRole(input);
+	}
+
+	@Mutation({
+		input: matterAddKeyDateInput,
+		output: matterKeyDateMutateOutput,
+		meta: restMeta("POST", "/matters/{matterId}/key-dates", ["Matters"]),
+	})
+	async addKeyDate(@Input() input: z.infer<typeof matterAddKeyDateInput>) {
+		return this.matters.addKeyDate(input);
+	}
+
+	@Mutation({
+		input: matterRemoveKeyDateInput,
+		output: matterKeyDateRemovedOutput,
+		meta: restMeta("DELETE", "/matters/{matterId}/key-dates/{keyDateId}", [
+			"Matters",
+		]),
+	})
+	async removeKeyDate(@Input() input: z.infer<typeof matterRemoveKeyDateInput>) {
+		return this.matters.removeKeyDate(input);
 	}
 
 	@Mutation({

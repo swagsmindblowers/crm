@@ -11,7 +11,9 @@ import { BackfillModule } from "./backfill/backfill.module";
 import { AppCacheModule } from "./cache/cache.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { validateEnv } from "./config/env.validation";
+import { ConflictChecksModule } from "./conflict-checks/conflict-checks.module";
 import { ContactsModule } from "./contacts/contacts.module";
+import { DocumentChecklistModule } from "./document-checklist/document-checklist.module";
 import { ConversationsModule } from "./conversations/conversations.module";
 import { CrmModule } from "./crm/crm.module";
 import { CurrencyModule } from "./currency/currency.module";
@@ -22,6 +24,7 @@ import { EnrichmentModule } from "./enrichment/enrichment.module";
 import { FieldsModule } from "./fields/fields.module";
 import { GoogleModule } from "./google/google.module";
 import { HealthModule } from "./health/health.module";
+import { IntakeModule } from "./intake/intake.module";
 import { LoggingModule } from "./logging/logging.module";
 import { logAuthRoute } from "./logging/request-logger.middleware";
 import { MailboxModule } from "./mailbox/mailbox.module";
@@ -60,6 +63,8 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		ConversationsModule,
 		CurrencyModule,
 		MattersModule,
+		DocumentChecklistModule,
+		ConflictChecksModule,
 		FieldsModule,
 		ActivitiesModule,
 		AgentModule,
@@ -77,6 +82,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		BackfillModule,
 		TelemetryModule,
 		TrackingModule,
+		IntakeModule,
 		ArchiveModule,
 		SavedViewsModule,
 	],

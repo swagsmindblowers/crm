@@ -14,6 +14,7 @@ const otherDomain = `elsewhere-${suffix}.test`;
 
 const agent = {
 	withCrmEvents: withDiscardedCrmEvents,
+	conflictCheckRequested: async () => false,
 } as unknown as AgentTriggerService;
 
 const matters = new MattersService(

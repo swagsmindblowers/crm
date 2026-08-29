@@ -2,11 +2,25 @@
 
 import Add from "@carbon/icons-react/es/Add";
 import Close from "@carbon/icons-react/es/Close";
+import DocumentBlank from "@carbon/icons-react/es/DocumentBlank";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
+import WarningAlt from "@carbon/icons-react/es/WarningAlt";
 import { CURRENCIES, normalizeCurrency } from "@crm/db/currency";
 import type { FieldValueJson } from "@crm/db/fields";
+import {
+	MATTER_SERVICES,
+	serviceDefaultFeeCents,
+	serviceLabel,
+} from "@crm/validation/matter-services";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+} from "@crm/ui/components/alert";
 import { Button } from "@crm/ui/components/button";
+import { Checkbox } from "@crm/ui/components/checkbox";
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
+import { Input } from "@crm/ui/components/input";
 import {
 	EntityLogo,
 	type EntityLogoTone,
@@ -114,6 +128,27 @@ const CONTACT_COLUMNS = [
 	{ id: "remove", srLabel: "Remove", width: "w-10" },
 ];
 
+const SERVICE_OPTIONS = MATTER_SERVICES.map((service) => ({
+	value: service.id,
+	label: service.label,
+}));
+
+const PAYMENT_OPTIONS = [
+	{ value: "UNPAID", label: "Unpaid" },
+	{ value: "PARTIALLY_PAID", label: "Partially paid" },
+	{ value: "PAID", label: "Paid" },
+	{ value: "WAIVED", label: "Waived" },
+];
+
+const KEY_DATE_LABELS = [
+	["applicationSubmittedAt", "Application submitted"],
+	["biometricsAt", "Biometrics"],
+	["decisionDueAt", "Decision due"],
+	["decisionReceivedAt", "Decision received"],
+	["visaExpiresAt", "Visa expires"],
+	["conditionsExpireAt", "Conditions expire"],
+] as const;
+
 const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
 	month: "short",
 	day: "numeric",
@@ -152,6 +187,11 @@ export function MatterSheet({ matterId }: { matterId: string }) {
 							onDone={() => setAdding(null)}
 						/>
 					),
+				},
+				{
+					value: "documents",
+					label: "Documents",
+					content: <MatterDocuments matterId={matter.id} />,
 				},
 				{
 					value: "activity",
@@ -214,7 +254,7 @@ export function MatterSheet({ matterId }: { matterId: string }) {
 			stats={
 				matter ? (
 					<DetailSheetStats>
-						<DetailSheetStat label="Amount">
+						<DetailSheetStat label="Fee">
 							{matter.amountCents === null ? (
 								<EmptyCellValue />
 							) : (
@@ -273,6 +313,8 @@ function MatterOverview({ matter }: { matter: Matter }) {
 
 	return (
 		<DetailSheetBody>
+			<ConflictFlag matterId={matter.id} />
+
 			<DetailSheetSection title="Stage">
 				<StageStepper matterId={matter.id} stage={matter.stage} />
 
@@ -292,20 +334,30 @@ function MatterOverview({ matter }: { matter: Matter }) {
 				) : null}
 			</DetailSheetSection>
 
-			<DetailSheetSection title="Details" action={<FieldsCog kind="matter" />}>
+			<DetailSheetSection title="Service &amp; fee">
 				<DetailSheetProperties>
-					<InlineField
-						label="Name"
-						value={matter.name}
-						saving={isSaving("name")}
-						onSave={(name) => name && save({ name })}
+					<InlineSelectField
+						label="Service"
+						value={matter.serviceType}
+						options={SERVICE_OPTIONS}
+						onSave={(serviceType) => {
+							const fee = serviceDefaultFeeCents(
+								serviceType as (typeof MATTER_SERVICES)[number]["id"],
+							);
+							save({
+								serviceType: serviceType as (typeof MATTER_SERVICES)[number]["id"],
+								...(matter.amountCents === null && fee !== null
+									? { amountCents: fee }
+									: {}),
+							});
+						}}
 					/>
 					<InlineField
-						label="Amount"
+						label="Agreed fee (excl. VAT)"
 						value={
 							matter.amountCents === null ? null : String(matter.amountCents / 100)
 						}
-						placeholder="24000"
+						placeholder="2500"
 						saving={isSaving("amountCents")}
 						onSave={(next) => {
 							if (next === "") return save({ amountCents: null });
@@ -327,8 +379,40 @@ function MatterOverview({ matter }: { matter: Matter }) {
 						onSave={(currency) => save({ currency })}
 					/>
 					<ReportedValue matter={matter} />
+					<InlineSelectField
+						label="Payment"
+						value={matter.paymentStatus}
+						options={PAYMENT_OPTIONS}
+						onSave={(paymentStatus) =>
+							save({
+								paymentStatus: paymentStatus as Matter["paymentStatus"],
+							})
+						}
+					/>
+					<InlineField
+						label="Disbursements"
+						value={matter.disbursementsNotes}
+						placeholder="IHS, Home Office fee, priority service…"
+						saving={isSaving("disbursementsNotes")}
+						onSave={(disbursementsNotes) =>
+							save({ disbursementsNotes: disbursementsNotes || null })
+						}
+					/>
+				</DetailSheetProperties>
+			</DetailSheetSection>
+
+			<MatterKeyDates matter={matter} save={save} isSaving={isSaving} />
+
+			<DetailSheetSection title="Details" action={<FieldsCog kind="matter" />}>
+				<DetailSheetProperties>
+					<InlineField
+						label="Name"
+						value={matter.name}
+						saving={isSaving("name")}
+						onSave={(name) => name && save({ name })}
+					/>
 					<InlineDateField
-						label="Close date"
+						label="Target date"
 						value={matter.expectedCloseDate}
 						saving={isSaving("expectedCloseDate")}
 						onSave={(next) => save({ expectedCloseDate: next || null })}
@@ -368,6 +452,316 @@ function MatterOverview({ matter }: { matter: Matter }) {
 
 			<WhereItStands matter={matter} />
 		</DetailSheetBody>
+	);
+}
+
+function ConflictFlag({ matterId }: { matterId: string }) {
+	const trpc = useTRPC();
+	const cache = useCrmCache();
+
+	const query = useQuery(trpc.conflictChecks.list.queryOptions({ matterId }));
+
+	const dismiss = useMutation(
+		trpc.conflictChecks.dismiss.mutationOptions({
+			onSuccess: () => cache.matter(matterId, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const flag = query.data?.checks.find(
+		(check) => check.status === "POTENTIAL_CONFLICT",
+	);
+	if (!flag) return null;
+
+	return (
+		<Alert variant="warning">
+			<Icon icon={WarningAlt} />
+			<AlertTitle>Potential conflict of interest</AlertTitle>
+			<AlertDescription>
+				<ul className="mt-1 space-y-0.5">
+					{flag.matches.map((match) => (
+						<li key={`${match.kind}:${match.id}:${match.matchedOn}`}>
+							<span className="font-medium">{match.label}</span> — {match.detail}
+						</li>
+					))}
+				</ul>
+				<div className="mt-2">
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={dismiss.isPending}
+						onClick={() => {
+							const note = window.prompt(
+								"Why is this not a conflict? The note goes on the record.",
+							);
+							if (note?.trim()) dismiss.mutate({ id: flag.id, note });
+						}}
+					>
+						Reviewed — not a conflict
+					</Button>
+				</div>
+			</AlertDescription>
+		</Alert>
+	);
+}
+
+function MatterKeyDates({
+	matter,
+	save,
+	isSaving,
+}: {
+	matter: Matter;
+	save: (data: {
+		applicationSubmittedAt?: string | null;
+		biometricsAt?: string | null;
+		decisionDueAt?: string | null;
+		decisionReceivedAt?: string | null;
+		visaExpiresAt?: string | null;
+		conditionsExpireAt?: string | null;
+	}) => void;
+	isSaving: (field: string) => boolean;
+}) {
+	const trpc = useTRPC();
+	const cache = useCrmCache();
+
+	const addKeyDate = useMutation(
+		trpc.matters.addKeyDate.mutationOptions({
+			onSuccess: () => cache.matter(matter.id, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const removeKeyDate = useMutation(
+		trpc.matters.removeKeyDate.mutationOptions({
+			onSuccess: () => cache.matter(matter.id, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	return (
+		<DetailSheetSection title="Key dates">
+			<DetailSheetProperties>
+				{KEY_DATE_LABELS.map(([field, label]) => (
+					<InlineDateField
+						key={field}
+						label={label}
+						value={matter[field]}
+						saving={isSaving(field)}
+						onSave={(next) => save({ [field]: next || null })}
+					/>
+				))}
+				{matter.keyDates.map((keyDate) => (
+					<DetailSheetProperty key={keyDate.id} label={keyDate.label}>
+						<span className="flex items-center gap-1.5">
+							<LocalDateTime date={keyDate.date} options={DATE_OPTIONS} />
+							{keyDate.notes ? (
+								<span className="text-muted-foreground">({keyDate.notes})</span>
+							) : null}
+							<Button
+								variant="ghost"
+								size="icon-xs"
+								disabled={removeKeyDate.isPending}
+								onClick={() =>
+									removeKeyDate.mutate({
+										matterId: matter.id,
+										keyDateId: keyDate.id,
+									})
+								}
+							>
+								<Icon icon={Close} />
+								<span className="sr-only">Remove {keyDate.label}</span>
+							</Button>
+						</span>
+					</DetailSheetProperty>
+				))}
+			</DetailSheetProperties>
+
+			<form
+				className="mt-2 flex items-center gap-2"
+				onSubmit={(event) => {
+					event.preventDefault();
+					const form = event.currentTarget;
+					const data = new FormData(form);
+					const label = String(data.get("label") ?? "").trim();
+					const date = String(data.get("date") ?? "");
+					if (!label || !date) return;
+					addKeyDate.mutate(
+						{ matterId: matter.id, label, date },
+						{ onSuccess: () => form.reset() },
+					);
+				}}
+			>
+				<Input
+					name="label"
+					placeholder="Sponsor licence renewal…"
+					className="h-7 max-w-56 text-xs"
+				/>
+				<Input name="date" type="date" className="h-7 max-w-36 text-xs" />
+				<Button
+					type="submit"
+					variant="outline"
+					size="sm"
+					disabled={addKeyDate.isPending}
+				>
+					<Icon icon={Add} data-icon="inline-start" />
+					Add date
+				</Button>
+			</form>
+		</DetailSheetSection>
+	);
+}
+
+const DOCUMENT_COLUMNS = [
+	{ id: "done", srLabel: "Received", width: "w-10", className: "pl-5" },
+	{ id: "label", header: "Document", width: "w-[44%]" },
+	{ id: "status", header: "Status", width: "w-[22%]" },
+	{ id: "received", header: "Received", width: "w-[22%]" },
+	{ id: "remove", srLabel: "Remove", width: "w-10" },
+];
+
+const DOCUMENT_STATUS_LABEL = {
+	OUTSTANDING: "Outstanding",
+	RECEIVED: "Received",
+	NOT_APPLICABLE: "Not applicable",
+} as const;
+
+function MatterDocuments({ matterId }: { matterId: string }) {
+	const trpc = useTRPC();
+	const cache = useCrmCache();
+
+	const query = useQuery(trpc.documentChecklist.list.queryOptions({ matterId }));
+
+	const update = useMutation(
+		trpc.documentChecklist.update.mutationOptions({
+			onSuccess: () => cache.matter(matterId, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const create = useMutation(
+		trpc.documentChecklist.create.mutationOptions({
+			onSuccess: () => cache.matter(matterId, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const remove = useMutation(
+		trpc.documentChecklist.remove.mutationOptions({
+			onSuccess: () => cache.matter(matterId, { settle: "record" }),
+			onError: (error) => toast.error(error.message),
+		}),
+	);
+
+	const items = query.data?.items ?? [];
+
+	if (!query.isPending && items.length === 0) {
+		return (
+			<DetailSheetEmpty
+				icon={DocumentBlank}
+				title="No documents tracked"
+				description="This matter has no checklist yet. Add the documents the application needs and tick them off as they come in."
+				action={
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							const label = window.prompt("Which document?");
+							if (label?.trim()) create.mutate({ matterId, label });
+						}}
+					>
+						<Icon icon={Add} data-icon="inline-start" />
+						Add document
+					</Button>
+				}
+			/>
+		);
+	}
+
+	return (
+		<SimpleTable variant="panel" columns={DOCUMENT_COLUMNS}>
+			{items.map((item) => (
+				<SimpleTableRow key={item.id}>
+					<TableCell className="py-2.5 pr-1 pl-5">
+						<Checkbox
+							checked={item.status === "RECEIVED"}
+							disabled={update.isPending}
+							onCheckedChange={(checked) =>
+								update.mutate({
+									id: item.id,
+									matterId,
+									status: checked ? "RECEIVED" : "OUTSTANDING",
+								})
+							}
+							aria-label={`Mark ${item.label} as received`}
+						/>
+					</TableCell>
+					<TableCell className="truncate px-3 py-2.5 font-medium">
+						<span
+							className={
+								item.status === "NOT_APPLICABLE"
+									? "text-muted-foreground line-through"
+									: undefined
+							}
+						>
+							{item.label}
+							{item.required ? null : (
+								<span className="text-muted-foreground"> (optional)</span>
+							)}
+						</span>
+						{item.description ? (
+							<span className="block truncate text-muted-foreground text-xs">
+								{item.description}
+							</span>
+						) : null}
+					</TableCell>
+					<TableCell className="truncate px-3 py-2.5">
+						<button
+							type="button"
+							className="text-muted-foreground underline-offset-2 hover:underline"
+							onClick={() =>
+								update.mutate({
+									id: item.id,
+									matterId,
+									status:
+										item.status === "NOT_APPLICABLE"
+											? "OUTSTANDING"
+											: "NOT_APPLICABLE",
+								})
+							}
+						>
+							{DOCUMENT_STATUS_LABEL[item.status]}
+						</button>
+					</TableCell>
+					<TableCell className="truncate px-3 py-2.5 text-muted-foreground">
+						{item.receivedAt ? (
+							<LocalDateTime date={item.receivedAt} options={DATE_OPTIONS} />
+						) : (
+							<EmptyCellValue />
+						)}
+					</TableCell>
+					<TableCell className="px-3 py-2.5">
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							disabled={remove.isPending}
+							onClick={() => remove.mutate({ id: item.id, matterId })}
+						>
+							<Icon icon={Close} />
+							<span className="sr-only">Remove {item.label}</span>
+						</Button>
+					</TableCell>
+				</SimpleTableRow>
+			))}
+
+			<AddRow
+				label="Add document"
+				columns={DOCUMENT_COLUMNS.length}
+				onClick={() => {
+					const label = window.prompt("Which document?");
+					if (label?.trim()) create.mutate({ matterId, label });
+				}}
+			/>
+		</SimpleTable>
 	);
 }
 

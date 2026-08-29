@@ -107,6 +107,13 @@ export class EnvironmentVariables {
 
 	@IsOptional()
 	@IsString()
+	@MinLength(16, {
+		message: "INTAKE_SHARED_SECRET must be at least 16 characters.",
+	})
+	INTAKE_SHARED_SECRET?: string;
+
+	@IsOptional()
+	@IsString()
 	BLOB_READ_WRITE_TOKEN?: string;
 
 	@IsOptional()

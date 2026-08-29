@@ -34,6 +34,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { type ComponentProps, Suspense, useId, useState } from "react";
 import { toast } from "sonner";
+import {
+	MATTER_SERVICES,
+	type MatterServiceId,
+	serviceDefaultFeeCents,
+} from "@crm/validation/matter-services";
 import { CompanyPicker } from "@/components/crm/company-picker";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
 import { matterStageLabel, OPEN_STAGES } from "@/lib/matter-stage";
@@ -73,6 +78,7 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 	const [company, setCompany] = useState(companyId ?? UNSET);
 	const [ownerId, setOwnerId] = useState(UNSET);
 	const [stage, setStage] = useState<string>("ENQUIRY");
+	const [serviceType, setServiceType] = useState<MatterServiceId>("OTHER");
 	const [amount, setAmount] = useState("");
 	const [currency, setCurrency] = useState("");
 	const [closeDate, setCloseDate] = useState("");
@@ -132,9 +138,10 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 							companyId: company,
 							ownerId: resolvedOwner,
 							stage: stage as never,
-							amountCents: Number.isFinite(parsed)
-								? Math.round(parsed * 100)
-								: null,
+							serviceType,
+							...(Number.isFinite(parsed)
+								? { amountCents: Math.round(parsed * 100) }
+								: {}),
 							currency: currency || workspaceCurrency,
 							expectedCloseDate: closeDate || null,
 						});
@@ -199,7 +206,36 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor={amountId}>Amount</FieldLabel>
+							<FieldLabel htmlFor="create-matter-service">Service</FieldLabel>
+							<Select
+								value={serviceType}
+								onValueChange={(next) => {
+									setServiceType(next as MatterServiceId);
+									if (amount === "") {
+										const fee = serviceDefaultFeeCents(next as MatterServiceId);
+										if (fee !== null) setAmount(String(fee / 100));
+									}
+								}}
+							>
+								<SelectTrigger id="create-matter-service">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{MATTER_SERVICES.map((service) => (
+										<SelectItem key={service.id} value={service.id}>
+											{service.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<FieldDescription>
+								Picking a service fills in the standard fixed fee and seeds the
+								document checklist.
+							</FieldDescription>
+						</Field>
+
+						<Field>
+							<FieldLabel htmlFor={amountId}>Agreed fee (excl. VAT)</FieldLabel>
 							<div className="flex gap-2">
 								<Input
 									id={amountId}

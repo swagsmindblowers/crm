@@ -13,6 +13,8 @@ import {
 	OPEN_MATTER_STAGES,
 } from "@crm/db/matter-stage";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
+import { checklistTemplateFor } from "@crm/validation/document-checklists";
+import { serviceDefaultFeeCents } from "@crm/validation/matter-services";
 import {
 	BadRequestException,
 	Injectable,
@@ -87,6 +89,15 @@ const CONTACT_SELECT = {
 
 const LOSING = new Set<MatterStage>(LOSING_MATTER_STAGES);
 
+const KEY_DATE_FIELDS = [
+	"applicationSubmittedAt",
+	"biometricsAt",
+	"decisionDueAt",
+	"decisionReceivedAt",
+	"visaExpiresAt",
+	"conditionsExpireAt",
+] as const;
+
 const SORTABLE: OrderByColumns<Prisma.MatterOrderByWithRelationInput[]> = {
 	name: (dir) => [{ name: dir }],
 	company: (dir) => [{ company: { name: dir } }, { name: "asc" }],
@@ -130,6 +141,9 @@ export class MattersService {
 						id: true,
 						name: true,
 						stage: true,
+						serviceType: true,
+						paymentStatus: true,
+						decisionDueAt: true,
 						amount: true,
 						currency: true,
 						baseAmount: true,
@@ -162,6 +176,7 @@ export class MattersService {
 					amount,
 					baseAmount,
 					expectedCloseDate,
+					decisionDueAt,
 					closedAt,
 					lastActivityAt,
 					createdAt,
@@ -171,6 +186,7 @@ export class MattersService {
 					...row,
 					amountCents: toCents(amount),
 					baseAmountCents: toCents(baseAmount),
+					decisionDueAt: decisionDueAt?.toISOString() ?? null,
 					expectedCloseDate: expectedCloseDate?.toISOString() ?? null,
 					closedAt: closedAt?.toISOString() ?? null,
 					lastActivityAt: lastActivityAt?.toISOString() ?? null,
@@ -200,6 +216,16 @@ export class MattersService {
 				description: true,
 				stage: true,
 				stageChangedAt: true,
+				serviceType: true,
+				paymentStatus: true,
+				vatExcluded: true,
+				disbursementsNotes: true,
+				applicationSubmittedAt: true,
+				biometricsAt: true,
+				decisionDueAt: true,
+				decisionReceivedAt: true,
+				visaExpiresAt: true,
+				conditionsExpireAt: true,
 				amount: true,
 				currency: true,
 				baseAmount: true,
@@ -216,6 +242,10 @@ export class MattersService {
 					select: { role: true, contact: { select: CONTACT_SELECT } },
 					orderBy: { contact: { firstName: "asc" } },
 				},
+				keyDates: {
+					select: { id: true, label: true, date: true, notes: true },
+					orderBy: { date: "asc" },
+				},
 			},
 		});
 
@@ -225,6 +255,7 @@ export class MattersService {
 
 		const {
 			contacts,
+			keyDates,
 			amount,
 			baseAmount,
 			fxRate,
@@ -242,12 +273,58 @@ export class MattersService {
 			fxRate: fxRate?.toNumber() ?? null,
 			fxRateAt: fxRateAt?.toISOString() ?? null,
 			stageChangedAt: matter.stageChangedAt.toISOString(),
+			applicationSubmittedAt:
+				matter.applicationSubmittedAt?.toISOString() ?? null,
+			biometricsAt: matter.biometricsAt?.toISOString() ?? null,
+			decisionDueAt: matter.decisionDueAt?.toISOString() ?? null,
+			decisionReceivedAt: matter.decisionReceivedAt?.toISOString() ?? null,
+			visaExpiresAt: matter.visaExpiresAt?.toISOString() ?? null,
+			conditionsExpireAt: matter.conditionsExpireAt?.toISOString() ?? null,
 			expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
 			closedAt: matter.closedAt?.toISOString() ?? null,
 			createdAt: matter.createdAt.toISOString(),
 			archivedAt: archivedAt?.toISOString() ?? null,
 			contacts: contacts.map(({ role, contact }) => ({ ...contact, role })),
+			keyDates: keyDates.map((row) => ({
+				id: row.id,
+				label: row.label,
+				date: row.date.toISOString(),
+				notes: row.notes,
+			})),
 		};
+	}
+
+	async addKeyDate(input: {
+		matterId: string;
+		label: string;
+		date: string;
+		notes?: string | null;
+	}) {
+		await this.companyOf(input.matterId);
+		const date = parseDate(input.date);
+		if (!date) {
+			throw new BadRequestException("A key date needs a date.");
+		}
+		const row = await this.db.matterKeyDate.create({
+			data: {
+				matterId: input.matterId,
+				label: input.label.trim(),
+				date,
+				notes: input.notes ? blankToNull(input.notes) : null,
+			},
+			select: { id: true, label: true, date: true, notes: true },
+		});
+		return { ...row, date: row.date.toISOString() };
+	}
+
+	async removeKeyDate(input: { matterId: string; keyDateId: string }) {
+		const { count } = await this.db.matterKeyDate.deleteMany({
+			where: { id: input.keyDateId, matterId: input.matterId },
+		});
+		if (count === 0) {
+			throw new NotFoundException("That key date is not on this matter.");
+		}
+		return { id: input.keyDateId };
 	}
 
 	async create(input: MatterCreateInput) {
@@ -255,11 +332,17 @@ export class MattersService {
 		const closed = isClosedStage(stage);
 		const now = new Date();
 
+		const serviceType = input.serviceType ?? "OTHER";
+		const amountCents =
+			input.amountCents === undefined
+				? serviceDefaultFeeCents(serviceType)
+				: input.amountCents;
+
 		const currency = normalizeCurrency(
 			input.currency ?? (await this.conversion.reportingCurrency()),
 		);
 		const fx = await this.conversion.matterFields(
-			decimalFromCents(input.amountCents),
+			decimalFromCents(amountCents),
 			currency,
 		);
 
@@ -271,15 +354,29 @@ export class MattersService {
 						companyId: input.companyId,
 						ownerId: input.ownerId,
 						stage,
+						serviceType,
 						stageChangedAt: now,
 						closedAt: closed ? now : null,
-						amount: fromCents(input.amountCents),
+						amount: fromCents(amountCents),
 						currency,
 						...fx,
 						expectedCloseDate: parseDate(input.expectedCloseDate),
 					},
 					select: { id: true, name: true, companyId: true },
 				});
+				const template = checklistTemplateFor(serviceType);
+				if (template.length > 0) {
+					await tx.documentChecklistItem.createMany({
+						data: template.map((item, index) => ({
+							matterId: created.id,
+							label: item.label,
+							description: item.description ?? null,
+							required: item.required,
+							position: index,
+							templateKey: item.key,
+						})),
+					});
+				}
 				await emit({
 					type: "matter.created",
 					record: { kind: "matter", id: created.id },
@@ -300,6 +397,10 @@ export class MattersService {
 			this.logger.log({ message: "Matter created", matterId: matter.id, stage });
 
 			void this.fields.queueBackfillForNewRecord("MATTER", matter.id);
+			void this.agent.conflictCheckRequested(
+				{ matterId: matter.id },
+				"New matter",
+			);
 
 			return matter;
 		} catch (error) {
@@ -320,6 +421,24 @@ export class MattersService {
 		}
 		if (input.ownerId !== undefined) {
 			data.owner = { connect: { id: input.ownerId } };
+		}
+		if (input.serviceType !== undefined) {
+			data.serviceType = input.serviceType;
+		}
+		if (input.paymentStatus !== undefined) {
+			data.paymentStatus = input.paymentStatus;
+		}
+		if (input.disbursementsNotes !== undefined) {
+			data.disbursementsNotes =
+				input.disbursementsNotes === null
+					? null
+					: blankToNull(input.disbursementsNotes);
+		}
+		for (const field of KEY_DATE_FIELDS) {
+			const value = input[field];
+			if (value !== undefined) {
+				data[field] = parseDate(value);
+			}
 		}
 		if (input.amountCents !== undefined) {
 			data.amount = fromCents(input.amountCents);

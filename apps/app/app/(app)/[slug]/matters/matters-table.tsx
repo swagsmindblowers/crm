@@ -27,9 +27,17 @@ import { MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
 import { MattersBulkActions } from "./matters-bulk-actions";
+import { serviceLabel } from "@crm/validation/matter-services";
 import { mattersSearchParams } from "./matters-search-params";
 
 type MatterRow = RouterOutputs["matters"]["list"]["rows"][number];
+
+const PAYMENT_LABELS = {
+	UNPAID: "Unpaid",
+	PARTIALLY_PAID: "Partially paid",
+	PAID: "Paid",
+	WAIVED: "Waived",
+} as const;
 
 const COLUMNS: DataTableColumn<MatterRow>[] = [
 	{
@@ -51,15 +59,26 @@ const COLUMNS: DataTableColumn<MatterRow>[] = [
 		id: "stage",
 		header: "Stage",
 		sortable: true,
-		width: "w-[18%]",
+		width: "w-[16%]",
 		cell: (row) => <MatterStageMenu matterId={row.id} stage={row.stage} />,
 	},
 	{
+		id: "service",
+		header: "Service",
+		width: "w-[16%]",
+		hideBelow: "md",
+		cell: (row) => (
+			<span className="truncate text-muted-foreground">
+				{serviceLabel(row.serviceType)}
+			</span>
+		),
+	},
+	{
 		id: "amount",
-		header: "Amount",
+		header: "Fee",
 		sortable: true,
 		align: "right",
-		width: "w-[12%]",
+		width: "w-[10%]",
 		hideBelow: "sm",
 		cell: (row) =>
 			row.amountCents === null ? (
@@ -68,6 +87,31 @@ const COLUMNS: DataTableColumn<MatterRow>[] = [
 				<span className="tabular-nums">
 					{formatMoney(row.amountCents, row.currency)}
 				</span>
+			),
+	},
+	{
+		id: "payment",
+		header: "Payment",
+		width: "w-[10%]",
+		defaultHidden: true,
+		cell: (row) => (
+			<span className="text-muted-foreground">
+				{PAYMENT_LABELS[row.paymentStatus]}
+			</span>
+		),
+	},
+	{
+		id: "decisionDueAt",
+		header: "Decision due",
+		width: "w-[12%]",
+		hideBelow: "lg",
+		cell: (row) =>
+			row.decisionDueAt ? (
+				<span className="text-muted-foreground">
+					<LocalDay date={row.decisionDueAt} />
+				</span>
+			) : (
+				<EmptyCellValue />
 			),
 	},
 	{

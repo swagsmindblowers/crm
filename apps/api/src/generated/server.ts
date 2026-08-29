@@ -17,15 +17,18 @@ import { timelineInput, timelineOutput, timelineCountsInput, timelineCountsOutpu
 import { agentListOutput, agentReviseInput, agentReviseOutput, agentIdInput, agentFilesOutput, agentSaveFileInput, agentSaveFileOutput, agentByIdOutput, agentHistoryInput, agentHistoryOutput, agentActivityOutput, agentUpdateInput, agentUpdateOutput, agentDeployInput, agentDeployOutput, agentPauseOutput, agentResumeOutput, agentArchiveOutput, agentRestoreOutput, agentRemoveOutput, agentRunNowInput, agentRunNowOutput, agentRetryRunInput, agentRetryRunOutput, agentCancelRunInput, agentCancelRunOutput } from "../agent/agents.contracts";
 import { apiKeyListInput, apiKeyListOutput, createApiKeyInput, createApiKeyOutput, revokeApiKeyInput, revokeApiKeyOutput } from "../api-keys/api-keys.contracts";
 import { companyListInput, companyListOutput, companyIdInput, companyDetailOutput, companyOptionsInput, companyOptionOutput, companyCreateInput, companySummaryOutput, companyUpdateArgs, companyArchiveResultOutput, companyBulkOwnerInput, companyBulkResultOutput, companyBulkInput, companyEnrichOutput, companyResearchOutput, setPrimaryContactInput, companySetPrimaryContactOutput } from "../companies/companies.contracts";
+import { conflictListInput, conflictListOutput, conflictRunInput, conflictRunOutput, conflictDismissInput, conflictCheckOutput } from "../conflict-checks/conflict-checks.contracts";
 import { contactListInput, contactListOutput, contactIdInput, contactByIdOutput, contactCreateInput, contactBasicOutput, contactUpdateArgs, contactNameOutput, contactEnrichOutput, contactBulkOwnerInput, bulkResultOutput, contactBulkCompanyInput, contactBulkInput, factDecisionInput, decideFactOutput } from "../contacts/contacts.contracts";
 import { conversationListInput, conversationListOutput, builderListOutput, builderResourceSearchInput, builderResourcesOutput, conversationIdInput, builderConversationDetailOutput, conversationEventsInput, conversationEventsOutput, conversationSaveInput, conversationIdOutput, builderConversationCreateInput, builderConversationSubmitInput, builderQuestionResponseInput, builderResponseRatingInput, builderResponseRatingOutput, conversationShareStatusOutput, conversationShareTokenOutput, sharedConversationInput, sharedConversationOutput } from "../conversations/conversations.contracts";
 import { currencySettingsOutput, setReportingCurrencyInput, setManualRateInput, removeManualRateInput } from "../currency/currency.contracts";
 import { dashboardSummaryInput, dashboardSummaryOutput } from "../dashboard/dashboard.contracts";
+import { checklistListInput, checklistListOutput, checklistCreateInput, checklistItemOutput, checklistUpdateInput, checklistRemoveInput, checklistRemovedOutput } from "../document-checklist/document-checklist.contracts";
 import { enrichmentQueueInput } from "@crm/validation/enrichment-queue";
 import { fieldListInput, fieldListOutput, fieldByKeyInput, serializedFieldOutput, fieldEntityInput, fieldFiltersOutput, fieldIdInput, fieldCoverageOutput, fieldCreateInput, fieldUpdateArgs, fieldReorderInput, fieldReorderOutput, fieldDeleteOutput, fieldBackfillOutput } from "../fields/fields.contracts";
 import { googleConnectionStatusOutput, setAutoCreateInput, suppressDomainInput, suppressDomainOutput, threadInput, emailThreadOutput, calendarEventInput, calendarEventOutput } from "../google/google.contracts";
 import { purgeSyncedDataOutput, revokeAccessOutput, microsoftConnectionStatusOutput, setOutlookAutoCreateInput } from "../microsoft/microsoft.contracts";
-import { matterListInput, matterListOutput, matterIdInput, matterDetailOutput, matterCreateInput, matterCreateOutput, matterUpdateArgs, matterMutateOutput, setStageInput, matterSetStageOutput, matterContactsInput, matterContactOptionsOutput, matterAttachContactInput, matterContactLinkOutput, matterDetachContactInput, matterContactRoleInput, matterContactRoleOutput, matterBulkOwnerInput, matterBulkResultOutput, matterBulkStageInput, matterBulkInput } from "../matters/matters.contracts";
+import { intakeStatusOutput } from "../intake/intake.contracts";
+import { matterListInput, matterListOutput, matterIdInput, matterDetailOutput, matterCreateInput, matterCreateOutput, matterUpdateArgs, matterMutateOutput, setStageInput, matterSetStageOutput, matterContactsInput, matterContactOptionsOutput, matterAttachContactInput, matterContactLinkOutput, matterDetachContactInput, matterContactRoleInput, matterContactRoleOutput, matterAddKeyDateInput, matterKeyDateMutateOutput, matterRemoveKeyDateInput, matterKeyDateRemovedOutput, matterBulkOwnerInput, matterBulkResultOutput, matterBulkStageInput, matterBulkInput } from "../matters/matters.contracts";
 import { savedViewListInput, savedViewListOutput, savedViewCreateInput, savedViewOutput, savedViewUpdateArgs, savedViewIdInput, savedViewDeleteOutput } from "../saved-views/saved-views.contracts";
 import { agentModelOutput, modelCatalogOutput, setAgentModelInput, researchKeyOutput, setResearchKeyInput, archiveRetentionOutput, setArchiveRetentionDaysInput } from "../settings/settings.contracts";
 import { slackStatusOutput, slackMatchesOutput, slackChannelsInput, slackChannelsOutput, slackJoinChannelInput, slackJoinChannelOutput, slackRefreshPeopleOutput, slackCreateChannelInput, slackCreateChannelOutput, slackDisconnectOutput } from "../slack/slack.contracts";
@@ -206,6 +209,20 @@ const appRouter = t.router({
       .output(companySetPrimaryContactOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  conflictChecks: t.router({
+    list: publicProcedure
+      .input(conflictListInput)
+      .output(conflictListOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    run: publicProcedure
+      .input(conflictRunInput)
+      .output(conflictRunOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    dismiss: publicProcedure
+      .input(conflictDismissInput)
+      .output(conflictCheckOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   contacts: t.router({
     list: publicProcedure
       .input(contactListInput)
@@ -359,6 +376,24 @@ const appRouter = t.router({
       .output(dashboardSummaryOutput)
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  documentChecklist: t.router({
+    list: publicProcedure
+      .input(checklistListInput)
+      .output(checklistListOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    create: publicProcedure
+      .input(checklistCreateInput)
+      .output(checklistItemOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    update: publicProcedure
+      .input(checklistUpdateInput)
+      .output(checklistItemOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    remove: publicProcedure
+      .input(checklistRemoveInput)
+      .output(checklistRemovedOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   enrichment: t.router({
     queue: publicProcedure
       .input(enrichmentQueueInput)
@@ -488,6 +523,11 @@ const appRouter = t.router({
       .output(calendarEventOutput)
       .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
     }),
+  intake: t.router({
+    status: publicProcedure
+      .output(intakeStatusOutput)
+      .query(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any)
+    }),
   matters: t.router({
     list: publicProcedure
       .input(matterListInput)
@@ -536,6 +576,14 @@ const appRouter = t.router({
     setContactRole: publicProcedure
       .input(matterContactRoleInput)
       .output(matterContactRoleOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    addKeyDate: publicProcedure
+      .input(matterAddKeyDateInput)
+      .output(matterKeyDateMutateOutput)
+      .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
+    removeKeyDate: publicProcedure
+      .input(matterRemoveKeyDateInput)
+      .output(matterKeyDateRemovedOutput)
       .mutation(async () => "PLACEHOLDER_DO_NOT_REMOVE" as any),
     bulkAssignOwner: publicProcedure
       .input(matterBulkOwnerInput)
