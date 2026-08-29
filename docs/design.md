@@ -15,7 +15,9 @@
 
 ## Colour
 
-Flat white, neutral greys, and one brand green (`#006B4F`). The greys are
+Flat white, neutral greys, and one brand navy (`#1F3A66` — a placeholder until
+MyLegalXpert's real brand colour is supplied; swap it in
+`packages/ui/src/styles/globals.css` and here). The greys are
 untinted on purpose: there is no scene to tint them toward, and a tinted grey
 without a reason reads as indecision.
 
@@ -27,5 +29,5 @@ landing on *go* or *stop* and skimming past the rest.
 `--primary` and `--destructive` hold the **same value in both themes**. A brand
 colour that changes per theme is not one colour, it is two, and both then need
 maintaining. The single exception is `--ring`, which lightens in dark: a fill
-carries the brand, but a ring only has to be seen, and `#006B4F` is too close to
+carries the brand, but a ring only has to be seen, and `#1F3A66` is too close to
 the dark background to register.

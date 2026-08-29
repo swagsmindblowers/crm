@@ -147,7 +147,7 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 								id={nameId}
 								value={name}
 								onChange={(event) => setName(event.target.value)}
-								placeholder="Stripe — Comp AI"
+								placeholder="Skilled Worker — A. Sharma"
 								autoComplete="off"
 								required
 							/>
