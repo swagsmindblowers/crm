@@ -39,7 +39,7 @@ const ENTRY_SELECT = {
 	createdBy: { select: AUTHOR_SELECT },
 	company: { select: { id: true, name: true } },
 	contact: { select: { id: true, firstName: true, lastName: true } },
-	deal: { select: { id: true, name: true } },
+	matter: { select: { id: true, name: true } },
 
 	emailThread: {
 		select: {
@@ -103,7 +103,7 @@ export class ActivitiesService {
 	}
 
 	async timelineCounts(
-		input: Pick<TimelineInput, "companyId" | "contactId" | "dealId">,
+		input: Pick<TimelineInput, "companyId" | "contactId" | "matterId">,
 	): Promise<TimelineCounts> {
 		const anchor = this.anchor(input);
 
@@ -144,14 +144,14 @@ export class ActivitiesService {
 				dueAt: isTask ? parseDate(input.dueAt) : null,
 				companyId,
 				contactId: input.contactId ?? null,
-				dealId: input.dealId ?? null,
+				matterId: input.matterId ?? null,
 				createdById: actingUserId,
 			},
 			select: ENTRY_SELECT,
 		});
 
 		await this.stamp.touch(
-			{ companyId, contactId: input.contactId, dealId: input.dealId },
+			{ companyId, contactId: input.contactId, matterId: input.matterId },
 			activity.createdAt,
 		);
 
@@ -215,13 +215,13 @@ export class ActivitiesService {
 	}
 
 	private anchor(
-		input: Pick<TimelineInput, "companyId" | "contactId" | "dealId">,
+		input: Pick<TimelineInput, "companyId" | "contactId" | "matterId">,
 	): Prisma.ActivityWhereInput {
-		if (input.dealId) return { dealId: input.dealId };
+		if (input.matterId) return { matterId: input.matterId };
 		if (input.contactId) return { contactId: input.contactId };
 		if (input.companyId) return { companyId: input.companyId };
 		throw new BadRequestException(
-			"A timeline needs a company, a contact or a deal.",
+			"A timeline needs a company, a contact or a matter.",
 		);
 	}
 
@@ -230,15 +230,15 @@ export class ActivitiesService {
 	): Promise<string | null> {
 		if (input.companyId) return input.companyId;
 
-		if (input.dealId) {
-			const deal = await this.db.deal.findUnique({
-				where: { id: input.dealId },
+		if (input.matterId) {
+			const matter = await this.db.matter.findUnique({
+				where: { id: input.matterId },
 				select: { companyId: true },
 			});
-			if (!deal) {
-				throw new NotFoundException(`No deal with id ${input.dealId}.`);
+			if (!matter) {
+				throw new NotFoundException(`No matter with id ${input.matterId}.`);
 			}
-			return deal.companyId;
+			return matter.companyId;
 		}
 
 		if (input.contactId) {

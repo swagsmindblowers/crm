@@ -10,6 +10,7 @@ import {
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
 import { useTableSelection } from "@crm/ui/hooks/use-table-selection";
 import { formatMoney } from "@crm/ui/lib/format";
+import { serviceLabel } from "@crm/validation/matter-services";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { CLOSING_OPTIONS } from "@/components/crm/closing-window";
@@ -19,22 +20,29 @@ import { useFieldFacets } from "@/components/crm/fields/field-facets";
 import { OwnerCell } from "@/components/crm/owner-cell";
 import { usePrefetchRecord } from "@/components/crm/record-sheet/record-prefetch";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
-import { DealStageMenu } from "@/components/crm/stage-change";
+import { MatterStageMenu } from "@/components/crm/stage-change";
 import { ListSearch } from "@/components/data-table/list-search";
 import { useTableQuery } from "@/components/data-table/use-table-query";
 import { LocalDay, LocalRelativeTime } from "@/components/local-date-time";
-import { DEAL_STAGE_OPTIONS } from "@/lib/deal-stage";
+import { MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
-import { DealsBulkActions } from "./deals-bulk-actions";
-import { dealsSearchParams } from "./deals-search-params";
+import { MattersBulkActions } from "./matters-bulk-actions";
+import { mattersSearchParams } from "./matters-search-params";
 
-type DealRow = RouterOutputs["deals"]["list"]["rows"][number];
+type MatterRow = RouterOutputs["matters"]["list"]["rows"][number];
 
-const COLUMNS: DataTableColumn<DealRow>[] = [
+const PAYMENT_LABELS = {
+	UNPAID: "Unpaid",
+	PARTIALLY_PAID: "Partially paid",
+	PAID: "Paid",
+	WAIVED: "Waived",
+} as const;
+
+const COLUMNS: DataTableColumn<MatterRow>[] = [
 	{
 		id: "name",
-		header: "Deal",
+		header: "Matter",
 		sortable: true,
 		hideable: false,
 		width: "w-[24%]",
@@ -51,15 +59,26 @@ const COLUMNS: DataTableColumn<DealRow>[] = [
 		id: "stage",
 		header: "Stage",
 		sortable: true,
-		width: "w-[18%]",
-		cell: (row) => <DealStageMenu dealId={row.id} stage={row.stage} />,
+		width: "w-[16%]",
+		cell: (row) => <MatterStageMenu matterId={row.id} stage={row.stage} />,
+	},
+	{
+		id: "service",
+		header: "Service",
+		width: "w-[16%]",
+		hideBelow: "md",
+		cell: (row) => (
+			<span className="truncate text-muted-foreground">
+				{serviceLabel(row.serviceType)}
+			</span>
+		),
 	},
 	{
 		id: "amount",
-		header: "Amount",
+		header: "Fee",
 		sortable: true,
 		align: "right",
-		width: "w-[12%]",
+		width: "w-[10%]",
 		hideBelow: "sm",
 		cell: (row) =>
 			row.amountCents === null ? (
@@ -68,6 +87,31 @@ const COLUMNS: DataTableColumn<DealRow>[] = [
 				<span className="tabular-nums">
 					{formatMoney(row.amountCents, row.currency)}
 				</span>
+			),
+	},
+	{
+		id: "payment",
+		header: "Payment",
+		width: "w-[10%]",
+		defaultHidden: true,
+		cell: (row) => (
+			<span className="text-muted-foreground">
+				{PAYMENT_LABELS[row.paymentStatus]}
+			</span>
+		),
+	},
+	{
+		id: "decisionDueAt",
+		header: "Decision due",
+		width: "w-[12%]",
+		hideBelow: "lg",
+		cell: (row) =>
+			row.decisionDueAt ? (
+				<span className="text-muted-foreground">
+					<LocalDay date={row.decisionDueAt} />
+				</span>
+			) : (
+				<EmptyCellValue />
 			),
 	},
 	{
@@ -126,7 +170,7 @@ const COLUMNS: DataTableColumn<DealRow>[] = [
 	},
 ];
 
-const ARCHIVED_COLUMN: DataTableColumn<DealRow> = {
+const ARCHIVED_COLUMN: DataTableColumn<MatterRow> = {
 	id: "archivedAt",
 	header: "Archived",
 	label: "Archived date",
@@ -144,19 +188,19 @@ const ARCHIVED_COLUMN: DataTableColumn<DealRow> = {
 	),
 };
 
-export function DealsTable() {
+export function MattersTable() {
 	const openRecord = useOpenRecord();
 	const trpc = useTRPC();
 	const prefetchRecord = usePrefetchRecord();
-	const { query, input, setArchived } = useTableQuery(dealsSearchParams);
+	const { query, input, setArchived } = useTableQuery(mattersSearchParams);
 
-	const deals = useQuery({
-		...trpc.deals.list.queryOptions(input),
+	const matters = useQuery({
+		...trpc.matters.list.queryOptions(input),
 		placeholderData: (previous) => previous,
 	});
 	const users = useQuery(trpc.users.list.queryOptions());
 
-	const rows = deals.data?.rows ?? [];
+	const rows = matters.data?.rows ?? [];
 	const selection = useTableSelection(
 		useMemo(() => rows.map((row) => row.id), [rows]),
 	);
@@ -180,8 +224,8 @@ export function DealsTable() {
 		setArchived(next);
 	};
 
-	const facetCounts = deals.data?.facetCounts;
-	const fieldFacets = useFieldFacets("DEAL", facetCounts);
+	const facetCounts = matters.data?.facetCounts;
+	const fieldFacets = useFieldFacets("MATTER", facetCounts);
 
 	const facets: DataTableFacet[] = [
 		{
@@ -196,7 +240,7 @@ export function DealsTable() {
 		{
 			id: "stage",
 			label: "Stage",
-			options: DEAL_STAGE_OPTIONS.filter(
+			options: MATTER_STAGE_OPTIONS.filter(
 				(option) => (facetCounts?.stage?.[option.value] ?? 0) > 0,
 			),
 		},
@@ -212,13 +256,13 @@ export function DealsTable() {
 		...fieldFacets,
 	];
 
-	const openValueCents = deals.data?.openValueCents;
-	const reportingCurrency = deals.data?.reportingCurrency;
-	const unconverted = deals.data?.unconverted;
+	const openValueCents = matters.data?.openValueCents;
+	const reportingCurrency = matters.data?.reportingCurrency;
+	const unconverted = matters.data?.unconverted;
 	const uncounted = unconverted?.count ?? 0;
 	const openPipelineCents = openValueCents ?? (uncounted > 0 ? 0 : null);
 
-	const fieldColumns = useFieldColumns<DealRow>("DEAL");
+	const fieldColumns = useFieldColumns<MatterRow>("MATTER");
 	const columns = useMemo(
 		() =>
 			input.archived
@@ -230,7 +274,7 @@ export function DealsTable() {
 	return (
 		<DataTable
 			query={query}
-			search={<ListSearch placeholder="Search deals by name or company…" />}
+			search={<ListSearch placeholder="Search matters by name or company…" />}
 			actions={
 				<Button
 					variant={input.archived ? "contrast" : "outline"}
@@ -244,12 +288,12 @@ export function DealsTable() {
 			}
 			columns={columns}
 			rows={rows}
-			total={deals.data?.total ?? 0}
+			total={matters.data?.total ?? 0}
 			facetCounts={facetCounts}
 			facets={facets}
 			tabs={{
 				id: "status",
-				allLabel: "All deals",
+				allLabel: "All matters",
 				options: [
 					{ value: "open", label: "Open" },
 					{ value: "closed", label: "Closed" },
@@ -258,7 +302,7 @@ export function DealsTable() {
 			selection={{
 				state: selection,
 				actions: (
-					<DealsBulkActions
+					<MattersBulkActions
 						ids={settledIds}
 						onDone={selection.clear}
 						archived={input.archived}
@@ -267,16 +311,16 @@ export function DealsTable() {
 				rowLabel: (row) => row.name,
 			}}
 			getRowId={(row) => row.id}
-			loading={deals.isFetching}
-			onRowHover={(row) => prefetchRecord({ kind: "deal", id: row.id })}
-			onRowClick={(row) => openRecord({ kind: "deal", id: row.id })}
+			loading={matters.isFetching}
+			onRowHover={(row) => prefetchRecord({ kind: "matter", id: row.id })}
+			onRowClick={(row) => openRecord({ kind: "matter", id: row.id })}
 			empty={
-				input.archived ? "No archived deals." : "No deals match this view."
+				input.archived ? "No archived matters." : "No matters match this view."
 			}
 			meta={
 				input.archived || openPipelineCents === null ? undefined : (
 					<span>
-						{deals.data?.total ?? 0} deals ·{" "}
+						{matters.data?.total ?? 0} matters ·{" "}
 						<span className="tabular-nums">
 							{formatMoney(openPipelineCents, reportingCurrency)}
 						</span>{" "}

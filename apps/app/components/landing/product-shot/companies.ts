@@ -5,7 +5,7 @@ export type MockCompany = {
 	industry?: string;
 	owner?: { name: string; avatar: string };
 	contacts?: string;
-	deals?: string;
+	matters?: string;
 	lastActivity?: string;
 };
 
@@ -21,7 +21,7 @@ export const MOCK_COMPANIES: MockCompany[] = [
 		industry: "Retail & E-commerce",
 		owner: OWNER,
 		contacts: "1",
-		deals: "0",
+		matters: "0",
 		lastActivity: "2h ago",
 	},
 	{
@@ -67,6 +67,6 @@ export const COMPANY_COLUMNS = [
 	{ label: "Industry", width: "16%" },
 	{ label: "Owner", width: "16%" },
 	{ label: "Contacts", width: "9%" },
-	{ label: "Deals", width: "9%" },
+	{ label: "Matters", width: "9%" },
 	{ label: "Last activity", width: "12%" },
 ] as const;

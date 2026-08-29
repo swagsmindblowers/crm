@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { DealStage, db } from "@crm/db";
-import { listDeals, searchCrm } from "../agent/lib/lookup";
+import { db, MatterStage } from "@crm/db";
+import { listMatters, searchCrm } from "../agent/lib/lookup";
 
 const suffix = process.env.TEST_RUN_ID ?? "lookup-spec";
 const domain = `northwind-${suffix}.test`;
@@ -10,9 +10,9 @@ let northwindId: string;
 let brightwaterId: string;
 let paulaId: string;
 let peterId: string;
-let dealId: string;
-let freshDealId: string;
-let closedDealId: string;
+let matterId: string;
+let freshMatterId: string;
+let closedMatterId: string;
 
 beforeAll(async () => {
 	await cleanup();
@@ -72,42 +72,42 @@ beforeAll(async () => {
 	});
 	peterId = peter.id;
 
-	const deal = await db.deal.create({
+	const matter = await db.matter.create({
 		data: {
 			name: `Northwind renewal ${suffix}`,
 			companyId: northwindId,
 			ownerId: user.id,
-			stage: DealStage.QUALIFIED_TO_BUY,
+			stage: MatterStage.INSTRUCTED,
 			amount: 12_000,
 			lastActivityAt: new Date("2026-06-01T12:00:00.000Z"),
 		},
 		select: { id: true },
 	});
-	dealId = deal.id;
+	matterId = matter.id;
 
-	const freshDeal = await db.deal.create({
+	const freshMatter = await db.matter.create({
 		data: {
 			name: `Fresh expansion ${suffix}`,
 			companyId: northwindId,
 			ownerId: user.id,
-			stage: DealStage.CONTRACT_SENT,
+			stage: MatterStage.SUBMITTED,
 			lastActivityAt: new Date("2026-08-04T12:00:00.000Z"),
 		},
 		select: { id: true },
 	});
-	freshDealId = freshDeal.id;
+	freshMatterId = freshMatter.id;
 
-	const closedDeal = await db.deal.create({
+	const closedMatter = await db.matter.create({
 		data: {
 			name: `Closed renewal ${suffix}`,
 			companyId: brightwaterId,
 			ownerId: user.id,
-			stage: DealStage.CLOSED_LOST,
+			stage: MatterStage.REFUSED,
 			lastActivityAt: new Date("2026-05-01T12:00:00.000Z"),
 		},
 		select: { id: true },
 	});
-	closedDealId = closedDeal.id;
+	closedMatterId = closedMatter.id;
 });
 
 afterAll(cleanup);
@@ -121,7 +121,7 @@ async function cleanup(): Promise<void> {
 
 	if (ids.length > 0) {
 		await db.activity.deleteMany({ where: { companyId: { in: ids } } });
-		await db.deal.deleteMany({ where: { companyId: { in: ids } } });
+		await db.matter.deleteMany({ where: { companyId: { in: ids } } });
 		await db.contact.deleteMany({ where: { companyId: { in: ids } } });
 		await db.company.deleteMany({ where: { id: { in: ids } } });
 	}
@@ -166,11 +166,11 @@ describe("searchCrm", () => {
 		expect(result.companies[0]?.id).toBe(northwindId);
 	});
 
-	it("finds a deal by name", async () => {
+	it("finds a matter by name", async () => {
 		const result = await searchCrm(`Northwind renewal ${suffix}`);
 
-		expect(result.deals[0]?.id).toBe(dealId);
-		expect(result.deals[0]?.amount).toBe(12_000);
+		expect(result.matters[0]?.id).toBe(matterId);
+		expect(result.matters[0]?.amount).toBe(12_000);
 	});
 
 	it("narrows to the kinds asked for", async () => {
@@ -179,7 +179,7 @@ describe("searchCrm", () => {
 		});
 
 		expect(result.companies).toHaveLength(0);
-		expect(result.deals).toHaveLength(0);
+		expect(result.matters).toHaveLength(0);
 		expect(result.contacts.length).toBeGreaterThan(0);
 	});
 
@@ -200,19 +200,21 @@ describe("searchCrm", () => {
 	});
 });
 
-describe("listDeals", () => {
-	it("lists stale open deals across the pipeline", async () => {
-		const result = await listDeals({
+describe("listMatters", () => {
+	it("lists stale open matters across the pipeline", async () => {
+		const result = await listMatters({
 			status: "open",
 			inactiveForDays: 14,
 			now: new Date("2026-08-05T12:00:00.000Z"),
 		});
-		const ids = result.deals.map((deal) => deal.id);
+		const ids = result.matters.map((matter) => matter.id);
 
-		expect(ids).toContain(dealId);
-		expect(ids).not.toContain(freshDealId);
-		expect(ids).not.toContain(closedDealId);
-		expect(result.deals.find((deal) => deal.id === dealId)).toMatchObject({
+		expect(ids).toContain(matterId);
+		expect(ids).not.toContain(freshMatterId);
+		expect(ids).not.toContain(closedMatterId);
+		expect(
+			result.matters.find((matter) => matter.id === matterId),
+		).toMatchObject({
 			daysSinceLastActivity: 65,
 			neverActive: false,
 			company: {
@@ -226,16 +228,16 @@ describe("listDeals", () => {
 		});
 	});
 
-	it("paginates a broad deal sweep without repeating a row", async () => {
-		const first = await listDeals({ status: "all", limit: 1 });
+	it("paginates a broad matter sweep without repeating a row", async () => {
+		const first = await listMatters({ status: "all", limit: 1 });
 		expect(first.hasMore).toBe(true);
 		expect(first.nextCursor).toBeTruthy();
 
-		const second = await listDeals({
+		const second = await listMatters({
 			status: "all",
 			limit: 1,
 			cursor: first.nextCursor ?? undefined,
 		});
-		expect(second.deals[0]?.id).not.toBe(first.deals[0]?.id);
+		expect(second.matters[0]?.id).not.toBe(first.matters[0]?.id);
 	});
 });

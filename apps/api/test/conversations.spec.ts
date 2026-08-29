@@ -170,7 +170,7 @@ describe("ConversationsService", () => {
 		expect(
 			conversationSaveInput.safeParse({
 				contactId,
-				dealId: "deal-1",
+				matterId: "matter-1",
 				sessionId: "session-1",
 			}).success,
 		).toBe(false);
@@ -411,7 +411,7 @@ describe("ConversationsService", () => {
 			{
 				clientRequestId: crypto.randomUUID(),
 				commandType: "CREATE_AGENT",
-				message: "/Create agent Flag stalled deals",
+				message: "/Create agent Flag stalled matters",
 				resources: [],
 				attachments: [],
 			},

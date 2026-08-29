@@ -1,3 +1,3 @@
 export const SEED_OWNER_PREFIX = "seed-";
 
-export const SEED_DEAL_PREFIX = "seed-deal-";
+export const SEED_MATTER_PREFIX = "seed-matter-";

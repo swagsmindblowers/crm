@@ -37,7 +37,7 @@ import {
 } from "@/components/crm/inline-field";
 import { OwnerCell } from "@/components/crm/owner-cell";
 import { ContactSocials } from "@/components/crm/social-links";
-import { DealStageMenu } from "@/components/crm/stage-change";
+import { MatterStageMenu } from "@/components/crm/stage-change";
 import { Timeline } from "@/components/crm/timeline/timeline";
 import { WebsiteActivity } from "@/components/crm/website-activity";
 import {
@@ -60,7 +60,7 @@ import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
 import { RecordActions } from "./record-actions";
-import { DealAmount, MetaLine, RecordSheetFrame } from "./record-parts";
+import { MatterAmount, MetaLine, RecordSheetFrame } from "./record-parts";
 import { useOpenRecord, useRecordSheetView } from "./record-stack";
 
 type Contact = RouterOutputs["contacts"]["byId"];
@@ -73,8 +73,8 @@ const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
 	year: "numeric",
 };
 
-const DEAL_COLUMNS = [
-	{ id: "deal", header: "Deal", width: "w-[32%]", className: "pl-5" },
+const MATTER_COLUMNS = [
+	{ id: "matter", header: "Matter", width: "w-[32%]", className: "pl-5" },
 	{ id: "role", header: "Role", width: "w-[16%]" },
 	{ id: "stage", header: "Stage", width: "w-[22%]" },
 	{
@@ -120,10 +120,10 @@ export function ContactSheet({ contactId }: { contactId: string }) {
 					content: <ContactOverview contact={contact} />,
 				},
 				{
-					value: "deals",
-					label: "Deals",
-					count: contact.deals.length,
-					content: <ContactDeals contact={contact} />,
+					value: "matters",
+					label: "Matters",
+					count: contact.matters.length,
+					content: <ContactMatters contact={contact} />,
 				},
 				{
 					value: "activity",
@@ -590,44 +590,44 @@ function Colleagues({
 	);
 }
 
-function ContactDeals({ contact }: { contact: Contact }) {
+function ContactMatters({ contact }: { contact: Contact }) {
 	const openRecord = useOpenRecord();
 
-	if (contact.deals.length === 0) {
+	if (contact.matters.length === 0) {
 		return (
 			<DetailSheetEmpty
 				icon={Partnership}
-				title="Not on any deals"
-				description={`${contactName(contact)} is not attached to anything being sold yet. Deals are opened on the company, then people are added to them.`}
+				title="Not on any matters"
+				description={`${contactName(contact)} is not attached to anything being sold yet. Matters are opened on the company, then people are added to them.`}
 			/>
 		);
 	}
 
 	return (
-		<SimpleTable variant="panel" columns={DEAL_COLUMNS}>
-			{contact.deals.map((deal) => (
+		<SimpleTable variant="panel" columns={MATTER_COLUMNS}>
+			{contact.matters.map((matter) => (
 				<SimpleTableRow
-					key={deal.id}
+					key={matter.id}
 					clickable
-					onClick={() => openRecord({ kind: "deal", id: deal.id })}
+					onClick={() => openRecord({ kind: "matter", id: matter.id })}
 				>
 					<TableCell className="truncate py-2.5 pr-3 pl-5 font-medium">
-						{deal.name}
+						{matter.name}
 					</TableCell>
 					<TableCell className="truncate px-3 py-2.5 text-muted-foreground">
-						{deal.role ?? <EmptyCellValue />}
+						{matter.role ?? <EmptyCellValue />}
 					</TableCell>
 					<TableCell className="px-3 py-2.5">
-						<DealStageMenu dealId={deal.id} stage={deal.stage} />
+						<MatterStageMenu matterId={matter.id} stage={matter.stage} />
 					</TableCell>
 					<TableCell className="px-3 py-2.5 text-right">
-						<DealAmount
-							amountCents={deal.amountCents}
-							currency={deal.currency}
+						<MatterAmount
+							amountCents={matter.amountCents}
+							currency={matter.currency}
 						/>
 					</TableCell>
 					<TableCell className="px-3 py-2.5">
-						<OwnerCell owner={deal.owner} />
+						<OwnerCell owner={matter.owner} />
 					</TableCell>
 				</SimpleTableRow>
 			))}

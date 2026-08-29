@@ -45,9 +45,9 @@ const never = [
 ];
 
 const suggestions = [
-	["When a deal is created", "Post the deal to an approved sales channel."],
-	["When a deal is won", "Tell an approved channel that the deal closed."],
-	["When a deal reopens", "Notify one approved channel or teammate."],
+	["When a matter is created", "Post the matter to an approved sales channel."],
+	["When a matter is won", "Tell an approved channel that the matter closed."],
+	["When a matter reopens", "Notify one approved channel or teammate."],
 ];
 
 type SlackConnectionPageProps = {
@@ -296,7 +296,7 @@ function MissingGrant({
 				<Icon icon={Warning} />
 				<AlertTitle>
 					{privateChannels
-						? "Comp AI cannot reach private channels"
+						? "MyLegalXpert cannot reach private channels"
 						: `Slack held back ${missing.length} permission${missing.length === 1 ? "" : "s"}`}
 				</AlertTitle>
 				<AlertDescription>

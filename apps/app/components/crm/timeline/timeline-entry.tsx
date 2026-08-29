@@ -1,6 +1,6 @@
 "use client";
 
-import { DealStage } from "@crm/db/enums";
+import { MatterStage } from "@crm/db/enums";
 import { Checkbox } from "@crm/ui/components/checkbox";
 import { StatusIndicator } from "@crm/ui/components/status-indicator";
 import { cn } from "@crm/ui/lib/utils";
@@ -10,7 +10,7 @@ import { z } from "zod";
 import { RecordLink } from "@/components/crm/record-sheet/record-link";
 import { LocalDateTime, LocalRelativeTime } from "@/components/local-date-time";
 import { activityLabel } from "@/lib/activity-presentation";
-import { dealStageLabel } from "@/lib/deal-stage";
+import { matterStageLabel } from "@/lib/matter-stage";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
@@ -28,14 +28,14 @@ const TIME_OPTIONS: Intl.DateTimeFormatOptions = {
 };
 
 const stageChange = z
-	.object({ from: z.enum(DealStage), to: z.enum(DealStage) })
+	.object({ from: z.enum(MatterStage), to: z.enum(MatterStage) })
 	.nullable()
 	.catch(null);
 
 function anchorId(anchor: TimelineAnchor): string {
 	if ("companyId" in anchor) return anchor.companyId;
 	if ("contactId" in anchor) return anchor.contactId;
-	return anchor.dealId;
+	return anchor.matterId;
 }
 
 export function TimelineEntry({
@@ -75,16 +75,16 @@ export function TimelineEntry({
 		: entry.createdBy.name;
 
 	const headline = change
-		? `${dealStageLabel(change.from)} → ${dealStageLabel(change.to)}`
+		? `${matterStageLabel(change.from)} → ${matterStageLabel(change.to)}`
 		: entry.subject;
 
 	const here = anchorId(anchor);
-	const deal = entry.deal && entry.deal.id !== here ? entry.deal : null;
+	const matter = entry.matter && entry.matter.id !== here ? entry.matter : null;
 	const contact =
 		entry.contact && entry.contact.id !== here ? entry.contact : null;
 
 	const footnotes = Boolean(
-		deal || contact || (isTask && !done && entry.dueAt),
+		matter || contact || (isTask && !done && entry.dueAt),
 	);
 
 	return (
@@ -178,9 +178,9 @@ export function TimelineEntry({
 							/>
 						) : null}
 
-						{deal ? (
-							<RecordLink kind="deal" id={deal.id}>
-								{deal.name}
+						{matter ? (
+							<RecordLink kind="matter" id={matter.id}>
+								{matter.name}
 							</RecordLink>
 						) : null}
 

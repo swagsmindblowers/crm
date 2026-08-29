@@ -11,20 +11,23 @@ import { BackfillModule } from "./backfill/backfill.module";
 import { AppCacheModule } from "./cache/cache.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { validateEnv } from "./config/env.validation";
+import { ConflictChecksModule } from "./conflict-checks/conflict-checks.module";
 import { ContactsModule } from "./contacts/contacts.module";
 import { ConversationsModule } from "./conversations/conversations.module";
 import { CrmModule } from "./crm/crm.module";
 import { CurrencyModule } from "./currency/currency.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DatabaseModule } from "./database/database.module";
-import { DealsModule } from "./deals/deals.module";
+import { DocumentChecklistModule } from "./document-checklist/document-checklist.module";
 import { EnrichmentModule } from "./enrichment/enrichment.module";
 import { FieldsModule } from "./fields/fields.module";
 import { GoogleModule } from "./google/google.module";
 import { HealthModule } from "./health/health.module";
+import { IntakeModule } from "./intake/intake.module";
 import { LoggingModule } from "./logging/logging.module";
 import { logAuthRoute } from "./logging/request-logger.middleware";
 import { MailboxModule } from "./mailbox/mailbox.module";
+import { MattersModule } from "./matters/matters.module";
 import { MicrosoftModule } from "./microsoft/microsoft.module";
 import { SavedViewsModule } from "./saved-views/saved-views.module";
 import { SearchModule } from "./search/search.module";
@@ -59,7 +62,9 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		ContactsModule,
 		ConversationsModule,
 		CurrencyModule,
-		DealsModule,
+		MattersModule,
+		DocumentChecklistModule,
+		ConflictChecksModule,
 		FieldsModule,
 		ActivitiesModule,
 		AgentModule,
@@ -77,6 +82,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		BackfillModule,
 		TelemetryModule,
 		TrackingModule,
+		IntakeModule,
 		ArchiveModule,
 		SavedViewsModule,
 	],

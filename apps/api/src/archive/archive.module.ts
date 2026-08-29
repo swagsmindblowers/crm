@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 import { CompaniesModule } from "../companies/companies.module";
 import { ContactsModule } from "../contacts/contacts.module";
-import { DealsModule } from "../deals/deals.module";
+import { MattersModule } from "../matters/matters.module";
 import { ArchiveRetentionController } from "./archive-retention.controller";
 
 @Module({
-	imports: [CompaniesModule, ContactsModule, DealsModule],
+	imports: [CompaniesModule, ContactsModule, MattersModule],
 	controllers: [ArchiveRetentionController],
 })
 export class ArchiveModule {}

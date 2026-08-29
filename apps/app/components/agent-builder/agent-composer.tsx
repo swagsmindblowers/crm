@@ -1461,7 +1461,7 @@ const RESOURCE_ICONS = {
 	integration: Application,
 	company: Building,
 	contact: User,
-	deal: Partnership,
+	matter: Partnership,
 } satisfies Record<BuilderResource["kind"], CarbonIcon>;
 
 function ResourceButton({

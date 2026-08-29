@@ -92,7 +92,7 @@ function directTask(overrides: Partial<LeasedTask> = {}): LeasedTask {
 		id: "task_direct",
 		contactId: null,
 		companyId: null,
-		dealId: null,
+		matterId: null,
 		kind: "brand",
 		reason: "A new company",
 		payload: null,

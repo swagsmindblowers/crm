@@ -1,8 +1,8 @@
-import { DealStage, db } from "@crm/db";
-import { LOSING_DEAL_STAGES, OPEN_DEAL_STAGES } from "@crm/db/deal-stage";
+import { db, MatterStage } from "@crm/db";
+import { LOSING_MATTER_STAGES, OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import { domainOf, normalise } from "./names";
 
-export type RecordKind = "contact" | "company" | "deal";
+export type RecordKind = "contact" | "company" | "matter";
 
 export type ContactHit = {
 	kind: "contact";
@@ -21,11 +21,11 @@ export type CompanyHit = {
 	domain: string | null;
 	industry: string | null;
 	contacts: number;
-	deals: number;
+	matters: number;
 };
 
-export type DealHit = {
-	kind: "deal";
+export type MatterHit = {
+	kind: "matter";
 	id: string;
 	name: string;
 	stage: string;
@@ -34,20 +34,20 @@ export type DealHit = {
 	company: { id: string; name: string };
 };
 
-export type SearchHit = ContactHit | CompanyHit | DealHit;
+export type SearchHit = ContactHit | CompanyHit | MatterHit;
 
 export type SearchResult = {
 	query: string;
 	contacts: ContactHit[];
 	companies: CompanyHit[];
-	deals: DealHit[];
+	matters: MatterHit[];
 	total: number;
 };
 
-export type DealListStatus = "open" | "won" | "lost" | "all";
+export type MatterListStatus = "open" | "won" | "lost" | "all";
 
-export type DealListOptions = {
-	status?: DealListStatus;
+export type MatterListOptions = {
+	status?: MatterListStatus;
 	inactiveForDays?: number;
 	companyId?: string;
 	ownerId?: string;
@@ -56,7 +56,7 @@ export type DealListOptions = {
 	now?: Date;
 };
 
-export async function listDeals(options: DealListOptions = {}) {
+export async function listMatters(options: MatterListOptions = {}) {
 	const status = options.status ?? "open";
 	const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
 	const now = options.now ?? new Date();
@@ -68,14 +68,14 @@ export async function listDeals(options: DealListOptions = {}) {
 				);
 	const stages =
 		status === "open"
-			? [...OPEN_DEAL_STAGES]
+			? [...OPEN_MATTER_STAGES]
 			: status === "won"
-				? [DealStage.CLOSED_WON]
+				? [MatterStage.GRANTED]
 				: status === "lost"
-					? [...LOSING_DEAL_STAGES]
+					? [...LOSING_MATTER_STAGES]
 					: null;
 
-	const rows = await db.deal.findMany({
+	const rows = await db.matter.findMany({
 		where: {
 			stage: stages ? { in: stages } : undefined,
 			companyId: options.companyId ?? undefined,
@@ -129,24 +129,24 @@ export async function listDeals(options: DealListOptions = {}) {
 			ownerId: options.ownerId ?? null,
 		},
 		asOf: now.toISOString(),
-		deals: page.map((deal) => {
-			const activityDate = deal.lastActivityAt ?? deal.createdAt;
+		matters: page.map((matter) => {
+			const activityDate = matter.lastActivityAt ?? matter.createdAt;
 			return {
-				id: deal.id,
-				name: deal.name,
-				stage: deal.stage,
-				amount: deal.amount === null ? null : Number(deal.amount),
-				currency: deal.currency,
-				company: deal.company,
-				owner: deal.owner,
-				createdAt: deal.createdAt.toISOString(),
-				lastActivityAt: deal.lastActivityAt?.toISOString() ?? null,
+				id: matter.id,
+				name: matter.name,
+				stage: matter.stage,
+				amount: matter.amount === null ? null : Number(matter.amount),
+				currency: matter.currency,
+				company: matter.company,
+				owner: matter.owner,
+				createdAt: matter.createdAt.toISOString(),
+				lastActivityAt: matter.lastActivityAt?.toISOString() ?? null,
 				daysSinceLastActivity: Math.max(
 					0,
 					Math.floor((now.getTime() - activityDate.getTime()) / 86_400_000),
 				),
-				neverActive: deal.lastActivityAt === null,
-				expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
+				neverActive: matter.lastActivityAt === null,
+				expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
 			};
 		}),
 		hasMore,
@@ -159,11 +159,11 @@ export async function searchCrm(
 	options: { kinds?: RecordKind[]; limit?: number } = {},
 ): Promise<SearchResult> {
 	const term = query.trim();
-	const kinds = options.kinds ?? ["contact", "company", "deal"];
+	const kinds = options.kinds ?? ["contact", "company", "matter"];
 	const limit = options.limit ?? 10;
 
 	if (term.length < 2) {
-		return { query: term, contacts: [], companies: [], deals: [], total: 0 };
+		return { query: term, contacts: [], companies: [], matters: [], total: 0 };
 	}
 
 	const wants = (kind: RecordKind) => kinds.includes(kind);
@@ -171,18 +171,18 @@ export async function searchCrm(
 	const domain = email ? domainOf(email) : bareDomain(term);
 	const words = term.split(/\s+/).filter((word) => word.length >= 2);
 
-	const [contacts, companies, deals] = await Promise.all([
+	const [contacts, companies, matters] = await Promise.all([
 		wants("contact") ? searchContacts(term, words, email, limit) : [],
 		wants("company") ? searchCompanies(term, words, domain, limit) : [],
-		wants("deal") ? searchDeals(term, words, limit) : [],
+		wants("matter") ? searchMatters(term, words, limit) : [],
 	]);
 
 	return {
 		query: term,
 		contacts,
 		companies,
-		deals,
-		total: contacts.length + companies.length + deals.length,
+		matters,
+		total: contacts.length + companies.length + matters.length,
 	};
 }
 
@@ -267,7 +267,7 @@ async function searchCompanies(
 			name: true,
 			domain: true,
 			industry: true,
-			_count: { select: { contacts: true, deals: true } },
+			_count: { select: { contacts: true, matters: true } },
 		},
 	});
 
@@ -281,7 +281,7 @@ async function searchCompanies(
 				domain: row.domain,
 				industry: row.industry,
 				contacts: row._count.contacts,
-				deals: row._count.deals,
+				matters: row._count.matters,
 			},
 		}))
 		.sort((a, b) => b.score - a.score)
@@ -289,12 +289,12 @@ async function searchCompanies(
 		.map((row) => row.hit);
 }
 
-async function searchDeals(
+async function searchMatters(
 	term: string,
 	words: string[],
 	limit: number,
-): Promise<DealHit[]> {
-	const rows = await db.deal.findMany({
+): Promise<MatterHit[]> {
+	const rows = await db.matter.findMany({
 		where: {
 			OR: [
 				{ name: { contains: term, mode: "insensitive" } },
@@ -320,7 +320,7 @@ async function searchDeals(
 		.map((row) => ({
 			score: score(term, [row.name, row.company.name]),
 			hit: {
-				kind: "deal" as const,
+				kind: "matter" as const,
 				id: row.id,
 				name: row.name,
 				stage: row.stage,

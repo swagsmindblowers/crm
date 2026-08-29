@@ -1,4 +1,5 @@
-import { EnrichmentStatus } from "@crm/db";
+import { db, EnrichmentStatus } from "@crm/db";
+import { runConflictCheck } from "@crm/db/conflicts";
 import { fieldBackfillPayload } from "@crm/validation/field-backfill";
 import { APP_AUTH, type AppAuth } from "./app-auth";
 import { brandOutcome, runBrand } from "./brand";
@@ -114,6 +115,20 @@ async function handleDirect(task: LeasedTask): Promise<void> {
 
 	if (task.kind === "slack-channel-join") {
 		await completeTask(task.id, await runSlackChannelJoin(task.payload));
+		return;
+	}
+
+	if (task.kind === "conflict-check" && (task.matterId || task.contactId)) {
+		const result = await runConflictCheck(db, {
+			matterId: task.matterId,
+			contactId: task.contactId,
+		});
+		await completeTask(
+			task.id,
+			result.matches.length === 0
+				? "Conflict check clear."
+				: `Potential conflict: ${result.matches.length} match${result.matches.length === 1 ? "" : "es"} to review.`,
+		);
 		return;
 	}
 
@@ -242,7 +257,7 @@ export function taskAuth(task: LeasedTask, base: AppAuth = APP_AUTH): AppAuth {
 	const records: Record<string, string> = {};
 	if (task.contactId) records.contactId = task.contactId;
 	if (task.companyId) records.companyId = task.companyId;
-	if (task.dealId) records.dealId = task.dealId;
+	if (task.matterId) records.matterId = task.matterId;
 
 	if (task.kind === "field-backfill") {
 		const parsed = fieldBackfillPayload.safeParse(task.payload);

@@ -47,7 +47,7 @@ const subjectOf = (companyId: string) => ({
 	kind: "brand",
 	contactId: null,
 	companyId,
-	dealId: null,
+	matterId: null,
 });
 
 async function retiredSubjectOf(companyId: string) {

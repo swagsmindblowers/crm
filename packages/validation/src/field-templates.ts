@@ -35,5 +35,5 @@ export const FIELD_TEMPLATES = {
 		{ label: "BDR owner", type: "USER" },
 	],
 	CONTACT: [],
-	DEAL: [],
-} satisfies Record<"COMPANY" | "CONTACT" | "DEAL", readonly FieldTemplate[]>;
+	MATTER: [],
+} satisfies Record<"COMPANY" | "CONTACT" | "MATTER", readonly FieldTemplate[]>;

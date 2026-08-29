@@ -198,10 +198,10 @@ export class ContactsService {
 					select: { ...COMPANY_SELECT, industry: true, primaryContactId: true },
 				},
 				owner: { select: OWNER_SELECT },
-				deals: {
+				matters: {
 					select: {
 						role: true,
-						deal: {
+						matter: {
 							select: {
 								id: true,
 								name: true,
@@ -226,7 +226,7 @@ export class ContactsService {
 			contact.company?.id ?? null,
 		);
 
-		const { deals, createdAt, archivedAt, brief, facts, company, ...rest } =
+		const { matters, createdAt, archivedAt, brief, facts, company, ...rest } =
 			contact;
 
 		return {
@@ -250,12 +250,12 @@ export class ContactsService {
 			})),
 			relationship,
 			isPrimaryContact: company?.primaryContactId === contact.id,
-			deals: deals.map(({ role, deal }) => ({
-				...deal,
+			matters: matters.map(({ role, matter }) => ({
+				...matter,
 				role,
 				amount: undefined,
-				amountCents: toCents(deal.amount),
-				expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
+				amountCents: toCents(matter.amount),
+				expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
 			})),
 		};
 	}

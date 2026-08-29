@@ -13,53 +13,53 @@ import {
 import { requireSession } from "@/lib/session";
 import { HydrateClient } from "@/lib/trpc/hydrate";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
-import { CreateDealSheet } from "./create-deal-sheet";
-import { dealsSearchParams } from "./deals-search-params";
-import { DealsTable } from "./deals-table";
+import { CreateMatterSheet } from "./create-matter-sheet";
+import { mattersSearchParams } from "./matters-search-params";
+import { MattersTable } from "./matters-table";
 
 export const metadata: Metadata = {
-	title: "Deals",
+	title: "Matters",
 };
 
-export default function DealsPage({
+export default function MattersPage({
 	searchParams,
-}: PageProps<"/[slug]/deals">) {
+}: PageProps<"/[slug]/matters">) {
 	return (
 		<PageShell className="min-h-0">
 			<PageShellHeader>
 				<PageShellHeading>
-					<PageShellTitle>Deals</PageShellTitle>
+					<PageShellTitle>Matters</PageShellTitle>
 					<PageShellDescription>
 						The pipeline, and everything that has already closed.
 					</PageShellDescription>
 				</PageShellHeading>
 				<PageShellActions>
-					<CreateDealSheet />
+					<CreateMatterSheet />
 				</PageShellActions>
 			</PageShellHeader>
 
 			<PageShellContent className="min-h-0">
 				<Suspense fallback={<PageShellLoading />}>
-					<Deals searchParams={searchParams} />
+					<Matters searchParams={searchParams} />
 				</Suspense>
 			</PageShellContent>
 		</PageShell>
 	);
 }
 
-async function Deals({
+async function Matters({
 	searchParams,
-}: Pick<PageProps<"/[slug]/deals">, "searchParams">) {
+}: Pick<PageProps<"/[slug]/matters">, "searchParams">) {
 	const [, values] = await Promise.all([
 		requireSession(),
-		dealsSearchParams.load(searchParams),
+		mattersSearchParams.load(searchParams),
 	]);
 
 	const trpc = getServerTrpc();
 	const queryClient = getServerQueryClient();
 	await Promise.all([
 		queryClient.prefetchQuery(
-			trpc.deals.list.queryOptions(dealsSearchParams.toInput(values)),
+			trpc.matters.list.queryOptions(mattersSearchParams.toInput(values)),
 		),
 		queryClient.prefetchQuery(trpc.users.list.queryOptions()),
 		queryClient.prefetchQuery(trpc.companies.options.queryOptions({ q: "" })),
@@ -67,7 +67,7 @@ async function Deals({
 
 	return (
 		<HydrateClient>
-			<DealsTable />
+			<MattersTable />
 		</HydrateClient>
 	);
 }

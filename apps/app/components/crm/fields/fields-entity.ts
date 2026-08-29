@@ -1,17 +1,17 @@
 import type { RecordKind } from "@/components/crm/record-sheet/record-stack";
 
-export type FieldEntity = "COMPANY" | "CONTACT" | "DEAL";
+export type FieldEntity = "COMPANY" | "CONTACT" | "MATTER";
 
 const TO_ENTITY = {
 	company: "COMPANY",
 	contact: "CONTACT",
-	deal: "DEAL",
+	matter: "MATTER",
 } satisfies Record<RecordKind, FieldEntity>;
 
 const TO_KIND = {
 	COMPANY: "company",
 	CONTACT: "contact",
-	DEAL: "deal",
+	MATTER: "matter",
 } satisfies Record<FieldEntity, RecordKind>;
 
 export function entityOf(kind: RecordKind): FieldEntity {

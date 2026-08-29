@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const permissions = [
 	{ id: "post", label: "Post a message" },
-	{ id: "mention", label: "Mention the deal owner" },
+	{ id: "mention", label: "Mention the matter owner" },
 	{ id: "thread", label: "Reply in a thread" },
 	{ id: "history", label: "Read the channel history" },
 ] as const;
@@ -87,7 +87,7 @@ export const CAPABILITY_RESOURCE_IDS = {
 
 export const capabilityResource = z.object({
 	id: z.string().trim().min(1).max(160),
-	kind: z.enum(["company", "contact", "deal", "integration"]),
+	kind: z.enum(["company", "contact", "matter", "integration"]),
 	label: z.string().trim().min(1).max(160),
 });
 

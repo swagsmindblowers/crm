@@ -5,8 +5,8 @@ import {
 	Prisma as PrismaNamespace,
 	type RecordSource,
 } from "@crm/db";
-import { OPEN_DEAL_STAGES } from "@crm/db/deal-stage";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
+import { OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import {
 	BadRequestException,
 	ConflictException,
@@ -61,7 +61,7 @@ const SORTABLE: OrderByColumns<Prisma.CompanyOrderByWithRelationInput> = {
 	industry: (dir) => ({ industry: dir }),
 	createdAt: (dir) => ({ createdAt: dir }),
 	contacts: (dir) => ({ contacts: { _count: dir } }),
-	deals: (dir) => ({ deals: { _count: dir } }),
+	matters: (dir) => ({ matters: { _count: dir } }),
 	owner: (dir) => ({ owner: { name: dir } }),
 	lastActivity: (dir) => ({ lastActivityAt: { sort: dir, nulls: "last" } }),
 	archivedAt: (dir) => ({ archivedAt: { sort: dir, nulls: "last" } }),
@@ -110,7 +110,7 @@ export class CompaniesService {
 					_count: {
 						select: {
 							contacts: true,
-							deals: { where: { stage: { in: [...OPEN_DEAL_STAGES] } } },
+							matters: { where: { stage: { in: [...OPEN_MATTER_STAGES] } } },
 						},
 					},
 					lastActivityAt: true,
@@ -144,7 +144,7 @@ export class CompaniesService {
 				source: row.source,
 				owner: row.owner,
 				contactCount: row._count.contacts,
-				openDealCount: row._count.deals,
+				openMatterCount: row._count.matters,
 				lastActivityAt: row.lastActivityAt?.toISOString() ?? null,
 				createdAt: row.createdAt.toISOString(),
 				archivedAt: row.archivedAt?.toISOString() ?? null,
@@ -212,7 +212,7 @@ export class CompaniesService {
 						owner: { select: OWNER_SELECT },
 					},
 				},
-				deals: {
+				matters: {
 					orderBy: [{ stage: "asc" }, { expectedCloseDate: "asc" }],
 					select: {
 						id: true,
@@ -233,7 +233,7 @@ export class CompaniesService {
 		}
 
 		const {
-			deals,
+			matters,
 			primaryContact,
 			enrichedAt,
 			createdAt,
@@ -251,13 +251,13 @@ export class CompaniesService {
 			primaryContactId: primaryContact?.id ?? null,
 			primaryContact,
 			reportingCurrency: await this.conversion.reportingCurrency(),
-			deals: deals.map((deal) => ({
-				...deal,
+			matters: matters.map((matter) => ({
+				...matter,
 				amount: undefined,
 				baseAmount: undefined,
-				amountCents: toCents(deal.amount),
-				baseAmountCents: toCents(deal.baseAmount),
-				expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
+				amountCents: toCents(matter.amount),
+				baseAmountCents: toCents(matter.baseAmount),
+				expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
 			})),
 		};
 	}
@@ -454,11 +454,11 @@ export class CompaniesService {
 				}
 
 				const targets = await this.stamp.targetsOf(
-					{ OR: [{ companyId: id }, { deal: { companyId: id } }] },
+					{ OR: [{ companyId: id }, { matter: { companyId: id } }] },
 					tx,
 				);
 
-				const deals = await tx.deal.findMany({
+				const matters = await tx.matter.findMany({
 					where: { companyId: id },
 					select: { id: true },
 				});
@@ -467,7 +467,7 @@ export class CompaniesService {
 					where: {
 						OR: [
 							{ companyId: id },
-							{ dealId: { in: deals.map((deal) => deal.id) } },
+							{ matterId: { in: matters.map((matter) => matter.id) } },
 						],
 					},
 				});

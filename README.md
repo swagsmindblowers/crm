@@ -11,11 +11,11 @@
   <img alt="stars" height="21" src="https://afterglow.watch/badge/trycompai/crm">
 </p>
 
-<h1 align="center">CRM</h1>
+<h1 align="center">MyLegalXpert</h1>
 
 <p align="center">
-  <strong>Comp AI CRM is an open source, CRM designed for AI agents.</strong><br>
-  Agentic-first CRM.
+  <strong>MyLegalXpert is an agentic practice-management system for a UK immigration law firm.</strong><br>
+  A fork of the open source Comp AI CRM, rebuilt around matters, document checklists, conflict checks and UKVI research.
 </p>
 
 <p align="center">

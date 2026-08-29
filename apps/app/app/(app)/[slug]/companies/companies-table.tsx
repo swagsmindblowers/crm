@@ -102,12 +102,12 @@ const COLUMNS: DataTableColumn<CompanyRow>[] = [
 		cell: (row) => <span className="tabular-nums">{row.contactCount}</span>,
 	},
 	{
-		id: "deals",
-		header: "Open deals",
+		id: "matters",
+		header: "Open matters",
 		sortable: true,
 		align: "right",
 		width: "w-[9%]",
-		cell: (row) => <span className="tabular-nums">{row.openDealCount}</span>,
+		cell: (row) => <span className="tabular-nums">{row.openMatterCount}</span>,
 	},
 	{
 		id: "createdAt",

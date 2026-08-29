@@ -21,14 +21,14 @@ export async function sessionPreamble(
 	record: {
 		contactId?: string | null;
 		companyId?: string | null;
-		dealId?: string | null;
+		matterId?: string | null;
 	},
 	opened: Opened,
 ): Promise<Preamble> {
 	if (opened.kind === "workspace-profile") return workspacePreamble();
 	if (record.contactId) return contactPreamble(record.contactId, opened);
 	if (record.companyId) return companyPreamble(record.companyId, opened);
-	if (record.dealId) return dealPreamble(record.dealId, opened);
+	if (record.matterId) return matterPreamble(record.matterId, opened);
 	return noRecordPreamble();
 }
 
@@ -87,12 +87,12 @@ export async function contactPreamble(
 			title: true,
 			company: { select: { id: true, name: true, domain: true } },
 			brief: { select: { refreshedAt: true } },
-			deals: {
-				orderBy: { deal: { lastActivityAt: "desc" } },
+			matters: {
+				orderBy: { matter: { lastActivityAt: "desc" } },
 				take: 5,
 				select: {
 					role: true,
-					deal: { select: { id: true, name: true, stage: true } },
+					matter: { select: { id: true, name: true, stage: true } },
 				},
 			},
 			_count: { select: { emailThreads: true, calendarEvents: true } },
@@ -110,10 +110,10 @@ export async function contactPreamble(
 			? `We have ${contact._count.emailThreads} thread(s) and ${contact._count.calendarEvents} meeting(s) with them — read those first.`
 			: "We have never corresponded with them, so there is nothing internal to go on.";
 
-	const deals = contact.deals
+	const matters = contact.matters
 		.map(
-			({ role, deal }) =>
-				`${deal.name} (${deal.stage}${role ? `, ${role}` : ""}) \`${deal.id}\``,
+			({ role, matter }) =>
+				`${matter.name} (${matter.stage}${role ? `, ${role}` : ""}) \`${matter.id}\``,
 		)
 		.join("; ");
 
@@ -140,7 +140,7 @@ export async function contactPreamble(
 					contact.company.domain ? ` (${contact.company.domain})` : ""
 				}, company id \`${contact.company.id}\` — pass that straight to \`read_company_history\`, \`enrich_company\` or \`research_company\` when the question reaches past this one person.`
 			: "They are not attached to a company. `search_crm` will find one by name or domain if the conversation needs it.",
-		deals ? `They are on: ${deals}.` : "They are not on any deal.",
+		matters ? `They are on: ${matters}.` : "They are not on any matter.",
 		"",
 		known,
 		contact.brief
@@ -176,7 +176,7 @@ export async function companyPreamble(
 				take: 12,
 				select: { id: true, firstName: true, lastName: true, title: true },
 			},
-			deals: {
+			matters: {
 				orderBy: [{ lastActivityAt: "desc" }, { createdAt: "desc" }],
 				take: 8,
 				select: { id: true, name: true, stage: true },
@@ -203,8 +203,8 @@ export async function companyPreamble(
 			? `\n- …and ${company._count.contacts - company.contacts.length} more; \`read_company_history\` lists them all.`
 			: "";
 
-	const deals = company.deals
-		.map((deal) => `${deal.name} (${deal.stage}) \`${deal.id}\``)
+	const matters = company.matters
+		.map((matter) => `${matter.name} (${matter.stage}) \`${matter.id}\``)
 		.join("; ");
 
 	const markdown = [
@@ -224,12 +224,12 @@ export async function companyPreamble(
 			? `### Who we know there (${company._count.contacts})\n\n${people}${more}\n\nThose are contact ids. Use them directly — with \`read_crm_history\`, \`identify_contact\` or \`record_fact\`. Never ask a rep which contact they mean without naming these first.`
 			: "We have no contacts on file here yet.",
 		"",
-		deals ? `Deals: ${deals}.` : "There are no deals here.",
+		matters ? `Matters: ${matters}.` : "There are no matters here.",
 		company.description
 			? "There is already a description on the record."
 			: "There is no description on the record yet.",
 		"",
-		"Start with `read_company_history` on this company id — it returns the people, the deals, the correspondence and the notes in one free call.",
+		"Start with `read_company_history` on this company id — it returns the people, the matters, the correspondence and the notes in one free call.",
 		"",
 		await closing(),
 	]
@@ -239,12 +239,12 @@ export async function companyPreamble(
 	return { markdown, focus: { companyId } };
 }
 
-export async function dealPreamble(
-	dealId: string,
+export async function matterPreamble(
+	matterId: string,
 	opened: Opened,
 ): Promise<Preamble> {
-	const deal = await db.deal.findUnique({
-		where: { id: dealId },
+	const matter = await db.matter.findUnique({
+		where: { id: matterId },
 		select: {
 			name: true,
 			description: true,
@@ -265,9 +265,9 @@ export async function dealPreamble(
 		},
 	});
 
-	if (!deal) return { markdown: await closing(), focus: {} };
+	if (!matter) return { markdown: await closing(), focus: {} };
 
-	const people = deal.contacts
+	const people = matter.contacts
 		.map(({ role, contact }) => {
 			const name = [contact.firstName, contact.lastName]
 				.filter(Boolean)
@@ -281,25 +281,25 @@ export async function dealPreamble(
 	const markdown = [
 		"## This session",
 		"",
-		`You are working on the deal **${deal.name}**${
-			deal.company ? ` at ${deal.company.name}` : ""
-		} — deal id \`${dealId}\`${
-			deal.company ? `, company id \`${deal.company.id}\`` : ""
+		`You are working on the matter **${matter.name}**${
+			matter.company ? ` at ${matter.company.name}` : ""
+		} — matter id \`${matterId}\`${
+			matter.company ? `, company id \`${matter.company.id}\`` : ""
 		}.`,
-		`Stage: **${deal.stage}**${
-			deal.amount
-				? `. Amount: ${deal.amount} ${deal.currency ?? ""}`.trim()
+		`Stage: **${matter.stage}**${
+			matter.amount
+				? `. Amount: ${matter.amount} ${matter.currency ?? ""}`.trim()
 				: ""
 		}${
-			deal.expectedCloseDate
-				? `. Expected close: ${deal.expectedCloseDate.toDateString()}`
+			matter.expectedCloseDate
+				? `. Expected close: ${matter.expectedCloseDate.toDateString()}`
 				: ""
 		}.`,
-		deal.lastActivityAt
-			? `Last touched ${deal.lastActivityAt.toDateString()}.`
+		matter.lastActivityAt
+			? `Last touched ${matter.lastActivityAt.toDateString()}.`
 			: "Nothing has happened on it yet.",
-		...(deal.description
-			? [`The rep's own description of it: "${deal.description}"`]
+		...(matter.description
+			? [`The rep's own description of it: "${matter.description}"`]
 			: []),
 		people ? `People on it: ${people}` : "Nobody is attached to it yet.",
 		fieldBackfillLine(opened),
@@ -309,18 +309,18 @@ export async function dealPreamble(
 			"where this stands, who else should be involved, or what the risk is",
 		),
 		"",
-		"Start with `read_deal_history` on this deal id. It returns the stage clock, every stage this deal has moved through, the last reply from their side and the next meeting — which is how you answer *where does this stand* rather than reciting the stage field back.",
+		"Start with `read_matter_history` on this matter id. It returns the stage clock, every stage this matter has moved through, the last reply from their side and the next meeting — which is how you answer *where does this stand* rather than reciting the stage field back.",
 		"",
 		opened.fieldKeys && opened.fieldKeys.length > 0
-			? "You can research the people and the company behind it with the usual tools too — most of what you learn about them is recorded against them, not the deal."
-			: "You can research the people and the company behind it with the usual tools — a deal itself has no fields to enrich, so anything you learn is recorded against them.",
+			? "You can research the people and the company behind it with the usual tools too — most of what you learn about them is recorded against them, not the matter."
+			: "You can research the people and the company behind it with the usual tools — a matter itself has no fields to enrich, so anything you learn is recorded against them.",
 		"",
 		await closing(),
 	]
 		.filter(Boolean)
 		.join("\n");
 
-	return { markdown, focus: { companyId: deal.company?.id ?? null } };
+	return { markdown, focus: { companyId: matter.company?.id ?? null } };
 }
 
 export async function noRecordPreamble(): Promise<Preamble> {
@@ -330,7 +330,7 @@ export async function noRecordPreamble(): Promise<Preamble> {
 			"",
 			"No record was named, so nothing is in focus yet.",
 			"`list_outstanding_work` shows contacts with research outstanding, and",
-			"`search_crm` finds any contact, company or deal by name, email address or",
+			"`search_crm` finds any contact, company or matter by name, email address or",
 			"domain. Look the record up rather than asking for an id.",
 			"",
 			await closing(),

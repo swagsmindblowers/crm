@@ -1,18 +1,20 @@
 import {
 	ActivityType,
 	type Db,
-	type DealStage,
+	type MatterStage,
 	type Prisma,
 	Prisma as PrismaNamespace,
 } from "@crm/db";
 import { normalizeCurrency } from "@crm/db/currency";
-import {
-	CLOSED_DEAL_STAGES,
-	isClosedStage,
-	LOSING_DEAL_STAGES,
-	OPEN_DEAL_STAGES,
-} from "@crm/db/deal-stage";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
+import {
+	CLOSED_MATTER_STAGES,
+	isClosedStage,
+	LOSING_MATTER_STAGES,
+	OPEN_MATTER_STAGES,
+} from "@crm/db/matter-stage";
+import { checklistTemplateFor } from "@crm/validation/document-checklists";
+import { serviceDefaultFeeCents } from "@crm/validation/matter-services";
 import {
 	BadRequestException,
 	Injectable,
@@ -47,17 +49,17 @@ import {
 } from "../trpc/list-input";
 import type {
 	ClosingWindow,
-	DealAttachContactInput,
-	DealBulkOwnerInput,
-	DealBulkStageInput,
-	DealContactRoleInput,
-	DealCreateInput,
-	DealDetachContactInput,
-	DealListInput,
-	DealUpdateInput,
+	MatterAttachContactInput,
+	MatterBulkOwnerInput,
+	MatterBulkStageInput,
+	MatterContactRoleInput,
+	MatterCreateInput,
+	MatterDetachContactInput,
+	MatterListInput,
+	MatterUpdateInput,
 	SetStageInput,
-} from "./deals.contracts";
-import { CLOSING_WINDOWS } from "./deals.contracts";
+} from "./matters.contracts";
+import { CLOSING_WINDOWS } from "./matters.contracts";
 
 const OWNER_SELECT = {
 	id: true,
@@ -85,9 +87,18 @@ const CONTACT_SELECT = {
 	imageUrl: true,
 } as const;
 
-const LOSING = new Set<DealStage>(LOSING_DEAL_STAGES);
+const LOSING = new Set<MatterStage>(LOSING_MATTER_STAGES);
 
-const SORTABLE: OrderByColumns<Prisma.DealOrderByWithRelationInput[]> = {
+const KEY_DATE_FIELDS = [
+	"applicationSubmittedAt",
+	"biometricsAt",
+	"decisionDueAt",
+	"decisionReceivedAt",
+	"visaExpiresAt",
+	"conditionsExpireAt",
+] as const;
+
+const SORTABLE: OrderByColumns<Prisma.MatterOrderByWithRelationInput[]> = {
 	name: (dir) => [{ name: dir }],
 	company: (dir) => [{ company: { name: dir } }, { name: "asc" }],
 	stage: (dir) => [{ stage: dir }, { expectedCloseDate: "asc" }],
@@ -100,8 +111,8 @@ const SORTABLE: OrderByColumns<Prisma.DealOrderByWithRelationInput[]> = {
 };
 
 @Injectable()
-export class DealsService {
-	private readonly logger = new Logger(DealsService.name);
+export class MattersService {
+	private readonly logger = new Logger(MattersService.name);
 
 	constructor(
 		@InjectDatabase() private readonly db: Db,
@@ -111,17 +122,17 @@ export class DealsService {
 		private readonly fields: FieldsService,
 	) {}
 
-	async list(input: DealListInput) {
-		const filterableFields = await this.fields.filterableFieldsFor("DEAL");
+	async list(input: MatterListInput) {
+		const filterableFields = await this.fields.filterableFieldsFor("MATTER");
 		const where = this.buildWhere(input, filterableFields);
 		const { skip, take } = paginate(input);
 
-		const openWhere = { ...where, stage: { in: [...OPEN_DEAL_STAGES] } };
+		const openWhere = { ...where, stage: { in: [...OPEN_MATTER_STAGES] } };
 		const base = await this.conversion.reportingCurrency();
 
 		const [rows, total, facetCounts, openValue, unconverted] =
 			await Promise.all([
-				this.db.deal.findMany({
+				this.db.matter.findMany({
 					where,
 					skip,
 					take,
@@ -130,6 +141,9 @@ export class DealsService {
 						id: true,
 						name: true,
 						stage: true,
+						serviceType: true,
+						paymentStatus: true,
+						decisionDueAt: true,
 						amount: true,
 						currency: true,
 						baseAmount: true,
@@ -142,9 +156,9 @@ export class DealsService {
 						archivedAt: true,
 					},
 				}),
-				this.db.deal.count({ where }),
+				this.db.matter.count({ where }),
 				this.facetCounts(input, filterableFields),
-				this.db.deal.aggregate({
+				this.db.matter.aggregate({
 					where: { AND: [openWhere, this.conversion.countedWhere(base)] },
 					_sum: { baseAmount: true },
 				}),
@@ -152,7 +166,7 @@ export class DealsService {
 			]);
 
 		const tableFields = await this.fields.tableValuesFor(
-			"DEAL",
+			"MATTER",
 			rows.map((row) => row.id),
 		);
 
@@ -162,6 +176,7 @@ export class DealsService {
 					amount,
 					baseAmount,
 					expectedCloseDate,
+					decisionDueAt,
 					closedAt,
 					lastActivityAt,
 					createdAt,
@@ -171,6 +186,7 @@ export class DealsService {
 					...row,
 					amountCents: toCents(amount),
 					baseAmountCents: toCents(baseAmount),
+					decisionDueAt: decisionDueAt?.toISOString() ?? null,
 					expectedCloseDate: expectedCloseDate?.toISOString() ?? null,
 					closedAt: closedAt?.toISOString() ?? null,
 					lastActivityAt: lastActivityAt?.toISOString() ?? null,
@@ -192,7 +208,7 @@ export class DealsService {
 	}
 
 	async byId(id: string) {
-		const deal = await this.db.deal.findUnique({
+		const matter = await this.db.matter.findUnique({
 			where: { id },
 			select: {
 				id: true,
@@ -200,6 +216,16 @@ export class DealsService {
 				description: true,
 				stage: true,
 				stageChangedAt: true,
+				serviceType: true,
+				paymentStatus: true,
+				vatExcluded: true,
+				disbursementsNotes: true,
+				applicationSubmittedAt: true,
+				biometricsAt: true,
+				decisionDueAt: true,
+				decisionReceivedAt: true,
+				visaExpiresAt: true,
+				conditionsExpireAt: true,
 				amount: true,
 				currency: true,
 				baseAmount: true,
@@ -216,80 +242,151 @@ export class DealsService {
 					select: { role: true, contact: { select: CONTACT_SELECT } },
 					orderBy: { contact: { firstName: "asc" } },
 				},
+				keyDates: {
+					select: { id: true, label: true, date: true, notes: true },
+					orderBy: { date: "asc" },
+				},
 			},
 		});
 
-		if (!deal) {
-			throw new NotFoundException(`No deal with id ${id}.`);
+		if (!matter) {
+			throw new NotFoundException(`No matter with id ${id}.`);
 		}
 
 		const {
 			contacts,
+			keyDates,
 			amount,
 			baseAmount,
 			fxRate,
 			fxRateAt,
 			archivedAt,
 			...rest
-		} = deal;
+		} = matter;
 
 		return {
 			...rest,
-			fields: await this.fields.valuesFor("DEAL", id),
+			fields: await this.fields.valuesFor("MATTER", id),
 			amountCents: toCents(amount),
 			baseAmountCents: toCents(baseAmount),
 			reportingCurrency: await this.conversion.reportingCurrency(),
 			fxRate: fxRate?.toNumber() ?? null,
 			fxRateAt: fxRateAt?.toISOString() ?? null,
-			stageChangedAt: deal.stageChangedAt.toISOString(),
-			expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
-			closedAt: deal.closedAt?.toISOString() ?? null,
-			createdAt: deal.createdAt.toISOString(),
+			stageChangedAt: matter.stageChangedAt.toISOString(),
+			applicationSubmittedAt:
+				matter.applicationSubmittedAt?.toISOString() ?? null,
+			biometricsAt: matter.biometricsAt?.toISOString() ?? null,
+			decisionDueAt: matter.decisionDueAt?.toISOString() ?? null,
+			decisionReceivedAt: matter.decisionReceivedAt?.toISOString() ?? null,
+			visaExpiresAt: matter.visaExpiresAt?.toISOString() ?? null,
+			conditionsExpireAt: matter.conditionsExpireAt?.toISOString() ?? null,
+			expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
+			closedAt: matter.closedAt?.toISOString() ?? null,
+			createdAt: matter.createdAt.toISOString(),
 			archivedAt: archivedAt?.toISOString() ?? null,
 			contacts: contacts.map(({ role, contact }) => ({ ...contact, role })),
+			keyDates: keyDates.map((row) => ({
+				id: row.id,
+				label: row.label,
+				date: row.date.toISOString(),
+				notes: row.notes,
+			})),
 		};
 	}
 
-	async create(input: DealCreateInput) {
-		const stage = input.stage ?? "DEMO_BOOKED";
+	async addKeyDate(input: {
+		matterId: string;
+		label: string;
+		date: string;
+		notes?: string | null;
+	}) {
+		await this.companyOf(input.matterId);
+		const date = parseDate(input.date);
+		if (!date) {
+			throw new BadRequestException("A key date needs a date.");
+		}
+		const row = await this.db.matterKeyDate.create({
+			data: {
+				matterId: input.matterId,
+				label: input.label.trim(),
+				date,
+				notes: input.notes ? blankToNull(input.notes) : null,
+			},
+			select: { id: true, label: true, date: true, notes: true },
+		});
+		return { ...row, date: row.date.toISOString() };
+	}
+
+	async removeKeyDate(input: { matterId: string; keyDateId: string }) {
+		const { count } = await this.db.matterKeyDate.deleteMany({
+			where: { id: input.keyDateId, matterId: input.matterId },
+		});
+		if (count === 0) {
+			throw new NotFoundException("That key date is not on this matter.");
+		}
+		return { id: input.keyDateId };
+	}
+
+	async create(input: MatterCreateInput) {
+		const stage = input.stage ?? "ENQUIRY";
 		const closed = isClosedStage(stage);
 		const now = new Date();
+
+		const serviceType = input.serviceType ?? "OTHER";
+		const amountCents =
+			input.amountCents === undefined
+				? serviceDefaultFeeCents(serviceType)
+				: input.amountCents;
 
 		const currency = normalizeCurrency(
 			input.currency ?? (await this.conversion.reportingCurrency()),
 		);
-		const fx = await this.conversion.dealFields(
-			decimalFromCents(input.amountCents),
+		const fx = await this.conversion.matterFields(
+			decimalFromCents(amountCents),
 			currency,
 		);
 
 		try {
-			const deal = await this.agent.withCrmEvents(async (tx, emit) => {
-				const created = await tx.deal.create({
+			const matter = await this.agent.withCrmEvents(async (tx, emit) => {
+				const created = await tx.matter.create({
 					data: {
 						name: input.name.trim(),
 						companyId: input.companyId,
 						ownerId: input.ownerId,
 						stage,
+						serviceType,
 						stageChangedAt: now,
 						closedAt: closed ? now : null,
-						amount: fromCents(input.amountCents),
+						amount: fromCents(amountCents),
 						currency,
 						...fx,
 						expectedCloseDate: parseDate(input.expectedCloseDate),
 					},
 					select: { id: true, name: true, companyId: true },
 				});
+				const template = checklistTemplateFor(serviceType);
+				if (template.length > 0) {
+					await tx.documentChecklistItem.createMany({
+						data: template.map((item, index) => ({
+							matterId: created.id,
+							label: item.label,
+							description: item.description ?? null,
+							required: item.required,
+							position: index,
+							templateKey: item.key,
+						})),
+					});
+				}
 				await emit({
-					type: "deal.created",
-					record: { kind: "deal", id: created.id },
+					type: "matter.created",
+					record: { kind: "matter", id: created.id },
 					occurredAt: now,
 					data: { companyId: created.companyId, stage },
 				});
 				if (closed) {
 					await emit({
-						type: "deal.closed",
-						record: { kind: "deal", id: created.id },
+						type: "matter.closed",
+						record: { kind: "matter", id: created.id },
 						occurredAt: now,
 						data: { companyId: created.companyId, from: null, to: stage },
 					});
@@ -297,18 +394,26 @@ export class DealsService {
 				return created;
 			});
 
-			this.logger.log({ message: "Deal created", dealId: deal.id, stage });
+			this.logger.log({
+				message: "Matter created",
+				matterId: matter.id,
+				stage,
+			});
 
-			void this.fields.queueBackfillForNewRecord("DEAL", deal.id);
+			void this.fields.queueBackfillForNewRecord("MATTER", matter.id);
+			void this.agent.conflictCheckRequested(
+				{ matterId: matter.id },
+				"New matter",
+			);
 
-			return deal;
+			return matter;
 		} catch (error) {
 			throw this.translateRelations(error);
 		}
 	}
 
-	async update(id: string, input: DealUpdateInput) {
-		const data: Prisma.DealUpdateInput = {};
+	async update(id: string, input: MatterUpdateInput) {
+		const data: Prisma.MatterUpdateInput = {};
 
 		if (input.name !== undefined) data.name = input.name.trim();
 		if (input.description !== undefined) {
@@ -321,6 +426,24 @@ export class DealsService {
 		if (input.ownerId !== undefined) {
 			data.owner = { connect: { id: input.ownerId } };
 		}
+		if (input.serviceType !== undefined) {
+			data.serviceType = input.serviceType;
+		}
+		if (input.paymentStatus !== undefined) {
+			data.paymentStatus = input.paymentStatus;
+		}
+		if (input.disbursementsNotes !== undefined) {
+			data.disbursementsNotes =
+				input.disbursementsNotes === null
+					? null
+					: blankToNull(input.disbursementsNotes);
+		}
+		for (const field of KEY_DATE_FIELDS) {
+			const value = input[field];
+			if (value !== undefined) {
+				data[field] = parseDate(value);
+			}
+		}
 		if (input.amountCents !== undefined) {
 			data.amount = fromCents(input.amountCents);
 		}
@@ -332,13 +455,13 @@ export class DealsService {
 		}
 
 		if (input.amountCents !== undefined || input.currency !== undefined) {
-			const current = await this.db.deal.findUnique({
+			const current = await this.db.matter.findUnique({
 				where: { id },
 				select: { amount: true, currency: true },
 			});
 
 			if (!current) {
-				throw new NotFoundException(`No deal with id ${id}.`);
+				throw new NotFoundException(`No matter with id ${id}.`);
 			}
 
 			const amount =
@@ -350,16 +473,16 @@ export class DealsService {
 					? normalizeCurrency(input.currency)
 					: normalizeCurrency(current.currency);
 
-			Object.assign(data, await this.conversion.dealFields(amount, currency));
+			Object.assign(data, await this.conversion.matterFields(amount, currency));
 		}
 
 		try {
 			return await this.db.$transaction(async (tx) => {
 				if (input.fields) {
-					await this.fields.applyValues(tx, "DEAL", id, input.fields);
+					await this.fields.applyValues(tx, "MATTER", id, input.fields);
 				}
 
-				return tx.deal.update({
+				return tx.matter.update({
 					where: { id },
 					data,
 					select: { id: true, name: true },
@@ -372,15 +495,15 @@ export class DealsService {
 
 	async archive(id: string): Promise<{ id: string; name: string }> {
 		try {
-			const deal = await this.db.deal.update({
+			const matter = await this.db.matter.update({
 				where: { id },
 				data: { archivedAt: new Date() },
 				select: { name: true },
 			});
 
-			this.logger.log({ message: "Deal archived", dealId: id });
+			this.logger.log({ message: "Matter archived", matterId: id });
 
-			return { id, name: deal.name };
+			return { id, name: matter.name };
 		} catch (error) {
 			throw this.translate(error, id);
 		}
@@ -388,15 +511,15 @@ export class DealsService {
 
 	async restore(id: string): Promise<{ id: string; name: string }> {
 		try {
-			const deal = await this.db.deal.update({
+			const matter = await this.db.matter.update({
 				where: { id },
 				data: { archivedAt: null },
 				select: { name: true },
 			});
 
-			this.logger.log({ message: "Deal restored", dealId: id });
+			this.logger.log({ message: "Matter restored", matterId: id });
 
-			return { id, name: deal.name };
+			return { id, name: matter.name };
 		} catch (error) {
 			throw this.translate(error, id);
 		}
@@ -416,12 +539,12 @@ export class DealsService {
 		try {
 			deleted = await this.db.$transaction(async (tx) => {
 				const [row] = await tx.$queryRaw<Array<{ archivedAt: Date | null }>>`
-					SELECT "archivedAt" FROM deal WHERE id = ${id} FOR UPDATE
+					SELECT "archivedAt" FROM matter WHERE id = ${id} FOR UPDATE
 				`;
 
 				if (!row) {
 					if (guard) return null;
-					throw new NotFoundException(`No deal with id ${id}.`);
+					throw new NotFoundException(`No matter with id ${id}.`);
 				}
 				if (
 					guard &&
@@ -430,15 +553,15 @@ export class DealsService {
 					return null;
 				}
 
-				const targets = await this.stamp.targetsOf({ dealId: id }, tx);
-				await tx.agentTask.deleteMany({ where: { dealId: id } });
+				const targets = await this.stamp.targetsOf({ matterId: id }, tx);
+				await tx.agentTask.deleteMany({ where: { matterId: id } });
 
-				const deal = await tx.deal.delete({
+				const matter = await tx.matter.delete({
 					where: { id },
 					select: { name: true },
 				});
 
-				return { targets, name: deal.name };
+				return { targets, name: matter.name };
 			});
 		} catch (error) {
 			throw this.translate(error, id);
@@ -446,11 +569,11 @@ export class DealsService {
 
 		if (!deleted) return null;
 
-		await this.stamp.recomputeAfterDelete(deleted.targets, { dealId: id });
+		await this.stamp.recomputeAfterDelete(deleted.targets, { matterId: id });
 
 		this.logger.log({
-			message: "Deal purged",
-			dealId: id,
+			message: "Matter purged",
+			matterId: id,
 			name: deleted.name,
 		});
 
@@ -458,7 +581,7 @@ export class DealsService {
 	}
 
 	async purgeExpired(before: Date): Promise<BulkResult> {
-		const expired = await this.db.deal.findMany({
+		const expired = await this.db.matter.findMany({
 			where: { archivedAt: { lte: before } },
 			select: { id: true },
 			take: ARCHIVE.prune.maxBatch,
@@ -474,35 +597,35 @@ export class DealsService {
 		const closedReason = input.closedReason?.trim();
 		const closed = isClosedStage(input.stage);
 		const transition = await this.agent.withCrmEvents(async (tx, emit) => {
-			const [deal] = await tx.$queryRaw<
-				Array<{ id: string; stage: DealStage; companyId: string }>
+			const [matter] = await tx.$queryRaw<
+				Array<{ id: string; stage: MatterStage; companyId: string }>
 			>`
 				SELECT id, stage, "companyId"
-				FROM deal
+				FROM matter
 				WHERE id = ${input.id}
 				FOR UPDATE
 			`;
 
-			if (!deal) {
-				throw new NotFoundException(`No deal with id ${input.id}.`);
+			if (!matter) {
+				throw new NotFoundException(`No matter with id ${input.id}.`);
 			}
 
-			if (deal.stage === input.stage) {
+			if (matter.stage === input.stage) {
 				return {
 					changed: false as const,
-					deal,
-					updated: { id: deal.id, stage: deal.stage },
+					matter,
+					updated: { id: matter.id, stage: matter.stage },
 					now: null,
 				};
 			}
 			if (LOSING.has(input.stage) && !closedReason) {
 				throw new BadRequestException(
-					"Say why it was lost — a closed-lost deal with no reason teaches nobody anything.",
+					"Say why it was lost — a closed-lost matter with no reason teaches nobody anything.",
 				);
 			}
 
 			const now = new Date();
-			const updated = await tx.deal.update({
+			const updated = await tx.matter.update({
 				where: { id: input.id },
 				data: {
 					stage: input.stage,
@@ -518,78 +641,85 @@ export class DealsService {
 					subject: "Stage changed",
 					body: closedReason ?? null,
 					occurredAt: now,
-					companyId: deal.companyId,
-					dealId: deal.id,
+					companyId: matter.companyId,
+					matterId: matter.id,
 					createdById: actingUserId,
-					meta: { from: deal.stage, to: input.stage },
+					meta: { from: matter.stage, to: input.stage },
 				},
 			});
 			await emit({
-				type: "deal.stage.changed",
-				record: { kind: "deal", id: deal.id },
+				type: "matter.stage.changed",
+				record: { kind: "matter", id: matter.id },
 				occurredAt: now,
-				data: { companyId: deal.companyId, from: deal.stage, to: input.stage },
+				data: {
+					companyId: matter.companyId,
+					from: matter.stage,
+					to: input.stage,
+				},
 			});
-			if (!isClosedStage(deal.stage) && closed) {
+			if (!isClosedStage(matter.stage) && closed) {
 				await emit({
-					type: "deal.closed",
-					record: { kind: "deal", id: deal.id },
+					type: "matter.closed",
+					record: { kind: "matter", id: matter.id },
 					occurredAt: now,
 					data: {
-						companyId: deal.companyId,
-						from: deal.stage,
+						companyId: matter.companyId,
+						from: matter.stage,
 						to: input.stage,
 					},
 				});
 			}
-			if (isClosedStage(deal.stage) && !closed) {
+			if (isClosedStage(matter.stage) && !closed) {
 				await emit({
-					type: "deal.opened",
-					record: { kind: "deal", id: deal.id },
+					type: "matter.opened",
+					record: { kind: "matter", id: matter.id },
 					occurredAt: now,
 					data: {
-						companyId: deal.companyId,
-						from: deal.stage,
+						companyId: matter.companyId,
+						from: matter.stage,
 						to: input.stage,
 					},
 				});
 			}
 
-			return { changed: true as const, deal, updated, now };
+			return { changed: true as const, matter, updated, now };
 		});
 
 		if (!transition.changed) {
 			return { ...transition.updated, changed: false };
 		}
 
-		const { deal, updated, now } = transition;
+		const { matter, updated, now } = transition;
 
-		await this.stamp.touch({ companyId: deal.companyId, dealId: deal.id }, now);
+		await this.stamp.touch(
+			{ companyId: matter.companyId, matterId: matter.id },
+			now,
+		);
 
 		this.logger.log({
-			message: "Deal stage changed",
-			dealId: deal.id,
-			from: deal.stage,
+			message: "Matter stage changed",
+			matterId: matter.id,
+			from: matter.stage,
 			to: input.stage,
 		});
 
 		return { ...updated, changed: true };
 	}
 
-	async contactOptions(dealId: string) {
-		const deal = await this.db.deal.findUnique({
-			where: { id: dealId },
+	async contactOptions(matterId: string) {
+		const matter = await this.db.matter.findUnique({
+			where: { id: matterId },
 			select: { companyId: true, contacts: { select: { contactId: true } } },
 		});
 
-		if (!deal) {
-			throw new NotFoundException(`No deal with id ${dealId}.`);
+		if (!matter) {
+			throw new NotFoundException(`No matter with id ${matterId}.`);
 		}
 
 		return this.db.contact.findMany({
 			where: {
-				companyId: deal.companyId,
-				id: { notIn: deal.contacts.map((row) => row.contactId) },
+				companyId: matter.companyId,
+				id: { notIn: matter.contacts.map((row) => row.contactId) },
 			},
 			select: CONTACT_SELECT,
 			orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
@@ -597,8 +727,8 @@ export class DealsService {
 		});
 	}
 
-	async attachContact(input: DealAttachContactInput) {
-		const company = await this.companyOf(input.dealId);
+	async attachContact(input: MatterAttachContactInput) {
+		const company = await this.companyOf(input.matterId);
 		const contact = await this.db.contact.findUnique({
 			where: { id: input.contactId },
 			select: { companyId: true },
@@ -616,70 +746,70 @@ export class DealsService {
 
 		const role = roleOrNull(input.role ?? null);
 
-		await this.db.dealContact.upsert({
+		await this.db.matterContact.upsert({
 			where: {
-				dealId_contactId: {
-					dealId: input.dealId,
+				matterId_contactId: {
+					matterId: input.matterId,
 					contactId: input.contactId,
 				},
 			},
-			create: { dealId: input.dealId, contactId: input.contactId, role },
+			create: { matterId: input.matterId, contactId: input.contactId, role },
 			update: role === null ? {} : { role },
 		});
 
 		this.logger.log({
-			message: "Contact attached to deal",
-			dealId: input.dealId,
+			message: "Contact attached to matter",
+			matterId: input.matterId,
 			contactId: input.contactId,
 		});
 
-		return { dealId: input.dealId, contactId: input.contactId };
+		return { matterId: input.matterId, contactId: input.contactId };
 	}
 
-	async detachContact(input: DealDetachContactInput) {
-		const { count } = await this.db.dealContact.deleteMany({
-			where: { dealId: input.dealId, contactId: input.contactId },
+	async detachContact(input: MatterDetachContactInput) {
+		const { count } = await this.db.matterContact.deleteMany({
+			where: { matterId: input.matterId, contactId: input.contactId },
 		});
 
 		if (count === 0) {
-			throw new NotFoundException("That contact is not on this deal.");
+			throw new NotFoundException("That contact is not on this matter.");
 		}
 
 		this.logger.log({
-			message: "Contact detached from deal",
-			dealId: input.dealId,
+			message: "Contact detached from matter",
+			matterId: input.matterId,
 			contactId: input.contactId,
 		});
 
-		return { dealId: input.dealId, contactId: input.contactId };
+		return { matterId: input.matterId, contactId: input.contactId };
 	}
 
-	async setContactRole(input: DealContactRoleInput) {
+	async setContactRole(input: MatterContactRoleInput) {
 		const role = roleOrNull(input.role);
 
-		const { count } = await this.db.dealContact.updateMany({
-			where: { dealId: input.dealId, contactId: input.contactId },
+		const { count } = await this.db.matterContact.updateMany({
+			where: { matterId: input.matterId, contactId: input.contactId },
 			data: { role },
 		});
 
 		if (count === 0) {
-			throw new NotFoundException("That contact is not on this deal.");
+			throw new NotFoundException("That contact is not on this matter.");
 		}
 
-		return { dealId: input.dealId, contactId: input.contactId, role };
+		return { matterId: input.matterId, contactId: input.contactId, role };
 	}
 
-	async bulkAssignOwner(input: DealBulkOwnerInput): Promise<BulkResult> {
+	async bulkAssignOwner(input: MatterBulkOwnerInput): Promise<BulkResult> {
 		await requireOwner(this.db, input.ownerId);
 
 		const ids = [...new Set(input.ids)];
-		const { count } = await this.db.deal.updateMany({
+		const { count } = await this.db.matter.updateMany({
 			where: { id: { in: ids } },
 			data: { ownerId: input.ownerId },
 		});
 
 		this.logger.log({
-			message: "Deals reassigned",
+			message: "Matters reassigned",
 			count,
 			ownerId: input.ownerId,
 		});
@@ -694,14 +824,14 @@ export class DealsService {
 	}
 
 	async bulkSetStage(
-		input: DealBulkStageInput,
+		input: MatterBulkStageInput,
 		actingUserId: string,
 	): Promise<BulkResult> {
 		const closedReason = input.closedReason?.trim();
 
 		if (LOSING.has(input.stage) && !closedReason) {
 			throw new BadRequestException(
-				"Say why they were lost — a closed-lost deal with no reason teaches nobody anything.",
+				"Say why they were lost — a closed-lost matter with no reason teaches nobody anything.",
 			);
 		}
 
@@ -722,20 +852,20 @@ export class DealsService {
 		return runBulk(ids, (id) => this.purge(id));
 	}
 
-	private async companyOf(dealId: string) {
-		const deal = await this.db.deal.findUnique({
-			where: { id: dealId },
+	private async companyOf(matterId: string) {
+		const matter = await this.db.matter.findUnique({
+			where: { id: matterId },
 			select: { company: { select: { id: true, name: true } } },
 		});
 
-		if (!deal) {
-			throw new NotFoundException(`No deal with id ${dealId}.`);
+		if (!matter) {
+			throw new NotFoundException(`No matter with id ${matterId}.`);
 		}
 
-		return deal.company;
+		return matter.company;
 	}
 
-	private searchFilter(q: string): Prisma.DealWhereInput {
+	private searchFilter(q: string): Prisma.MatterWhereInput {
 		const term = q.trim();
 		if (!term) return {};
 
@@ -748,26 +878,26 @@ export class DealsService {
 	}
 
 	private buildWhere(
-		input: DealListInput,
+		input: MatterListInput,
 		filterableFields: FieldDefinitionWithOptions[],
-	): Prisma.DealWhereInput {
-		const and: Prisma.DealWhereInput[] = [
+	): Prisma.MatterWhereInput {
+		const and: Prisma.MatterWhereInput[] = [
 			this.searchFilter(input.q),
 			archivedFilter(input.archived),
 			...this.fields.fieldFilters(filterableFields, input.fields),
 		];
 
-		const owner = ownerFilter<Prisma.DealWhereInput>(input.owner);
+		const owner = ownerFilter<Prisma.MatterWhereInput>(input.owner);
 		if (owner) and.push(owner);
 
 		if (input.status === "open") {
-			and.push({ stage: { in: [...OPEN_DEAL_STAGES] } });
+			and.push({ stage: { in: [...OPEN_MATTER_STAGES] } });
 		} else if (input.status === "closed") {
-			and.push({ stage: { in: [...CLOSED_DEAL_STAGES] } });
+			and.push({ stage: { in: [...CLOSED_MATTER_STAGES] } });
 		}
 
 		if (input.stage.length > 0) {
-			and.push({ stage: { in: input.stage as DealStage[] } });
+			and.push({ stage: { in: input.stage as MatterStage[] } });
 		}
 
 		if (input.closing.length > 0) {
@@ -782,28 +912,34 @@ export class DealsService {
 	}
 
 	private async facetCounts(
-		input: DealListInput,
+		input: MatterListInput,
 		filterableFields: FieldDefinitionWithOptions[],
 	) {
-		const where: Prisma.DealWhereInput = {
+		const where: Prisma.MatterWhereInput = {
 			AND: [this.searchFilter(input.q), archivedFilter(input.archived)],
 		};
 
 		const [owners, stages, fieldFacets, ...closingCounts] = await Promise.all([
-			this.db.deal.groupBy({ by: ["ownerId"], where, _count: { _all: true } }),
-			this.db.deal.groupBy({ by: ["stage"], where, _count: { _all: true } }),
-			this.fields.filterFacetCounts("DEAL", where, filterableFields),
+			this.db.matter.groupBy({
+				by: ["ownerId"],
+				where,
+				_count: { _all: true },
+			}),
+			this.db.matter.groupBy({ by: ["stage"], where, _count: { _all: true } }),
+			this.fields.filterFacetCounts("MATTER", where, filterableFields),
 			...CLOSING_WINDOWS.map((window) =>
-				this.db.deal.count({ where: { AND: [where, closingFilter(window)] } }),
+				this.db.matter.count({
+					where: { AND: [where, closingFilter(window)] },
+				}),
 			),
 		]);
 
 		const stageCounts = countsByKey(stages, "stage");
-		const openCount = OPEN_DEAL_STAGES.reduce(
+		const openCount = OPEN_MATTER_STAGES.reduce(
 			(total, stage) => total + (stageCounts[stage] ?? 0),
 			0,
 		);
-		const closedCount = CLOSED_DEAL_STAGES.reduce(
+		const closedCount = CLOSED_MATTER_STAGES.reduce(
 			(total, stage) => total + (stageCounts[stage] ?? 0),
 			0,
 		);
@@ -832,7 +968,7 @@ export class DealsService {
 			cause instanceof PrismaNamespace.PrismaClientKnownRequestError &&
 			cause.code === "P2025"
 		) {
-			throw new NotFoundException(`No deal with id ${id}.`);
+			throw new NotFoundException(`No matter with id ${id}.`);
 		}
 		return this.translateRelations(cause);
 	}
@@ -850,7 +986,7 @@ export class DealsService {
 	}
 }
 
-function closingFilter(window: ClosingWindow): Prisma.DealWhereInput {
+function closingFilter(window: ClosingWindow): Prisma.MatterWhereInput {
 	const now = new Date();
 	const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 	const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -860,7 +996,7 @@ function closingFilter(window: ClosingWindow): Prisma.DealWhereInput {
 		case "overdue":
 			return {
 				expectedCloseDate: { lt: now },
-				stage: { in: [...OPEN_DEAL_STAGES] },
+				stage: { in: [...OPEN_MATTER_STAGES] },
 			};
 		case "this-month":
 			return {

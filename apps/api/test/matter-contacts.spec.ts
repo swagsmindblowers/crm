@@ -3,20 +3,21 @@ import { db } from "@crm/db";
 import type { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { DealsService } from "../src/deals/deals.service";
 import { FieldsService } from "../src/fields/fields.service";
+import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
-const suffix = process.env.TEST_RUN_ID ?? "deal-contacts-spec";
+const suffix = process.env.TEST_RUN_ID ?? "matter-contacts-spec";
 const userId = `user-${suffix}`;
-const domain = `dealpeople-${suffix}.test`;
+const domain = `matterpeople-${suffix}.test`;
 const otherDomain = `elsewhere-${suffix}.test`;
 
 const agent = {
 	withCrmEvents: withDiscardedCrmEvents,
+	conflictCheckRequested: async () => false,
 } as unknown as AgentTriggerService;
 
-const deals = new DealsService(
+const matters = new MattersService(
 	db,
 	agent,
 	new ActivityStampService(db),
@@ -25,13 +26,13 @@ const deals = new DealsService(
 );
 
 let companyId: string;
-let dealId: string;
+let matterId: string;
 let championId: string;
 let colleagueId: string;
 let outsiderId: string;
 
 async function clean() {
-	await db.deal.deleteMany({ where: { company: { domain } } });
+	await db.matter.deleteMany({ where: { company: { domain } } });
 	await db.contact.deleteMany({
 		where: { company: { domain: { in: [domain, otherDomain] } } },
 	});
@@ -47,7 +48,7 @@ beforeAll(async () => {
 	await db.user.create({
 		data: {
 			id: userId,
-			name: "Deal Rep",
+			name: "Matter Rep",
 			email: `${userId}@example.test`,
 			emailVerified: true,
 		},
@@ -82,19 +83,19 @@ beforeAll(async () => {
 	});
 	outsiderId = outsider.id;
 
-	const deal = await deals.create({
+	const matter = await matters.create({
 		name: `Renewal ${suffix}`,
 		companyId,
 		ownerId: userId,
 	});
-	dealId = deal.id;
+	matterId = matter.id;
 });
 
 afterAll(clean);
 
-describe("bringing a contact onto a deal", () => {
-	it("offers the people at the deal's company and nobody else", async () => {
-		const options = await deals.contactOptions(dealId);
+describe("bringing a contact onto a matter", () => {
+	it("offers the people at the matter's company and nobody else", async () => {
+		const options = await matters.contactOptions(matterId);
 		const ids = options.map((option) => option.id);
 
 		expect(ids).toContain(championId);
@@ -102,71 +103,75 @@ describe("bringing a contact onto a deal", () => {
 		expect(ids).not.toContain(outsiderId);
 	});
 
-	it("attaches with a role and reads back on the deal", async () => {
-		await deals.attachContact({
-			dealId,
+	it("attaches with a role and reads back on the matter", async () => {
+		await matters.attachContact({
+			matterId,
 			contactId: championId,
 			role: "Champion",
 		});
 
-		const deal = await deals.byId(dealId);
+		const matter = await matters.byId(matterId);
 
-		expect(deal.contacts).toHaveLength(1);
-		expect(deal.contacts[0]?.id).toBe(championId);
-		expect(deal.contacts[0]?.role).toBe("Champion");
+		expect(matter.contacts).toHaveLength(1);
+		expect(matter.contacts[0]?.id).toBe(championId);
+		expect(matter.contacts[0]?.role).toBe("Champion");
 	});
 
 	it("stops offering somebody already on it", async () => {
-		const options = await deals.contactOptions(dealId);
+		const options = await matters.contactOptions(matterId);
 
 		expect(options.map((option) => option.id)).not.toContain(championId);
 	});
 
 	it("attaching twice keeps the role it already has", async () => {
-		await deals.attachContact({ dealId, contactId: championId });
+		await matters.attachContact({ matterId, contactId: championId });
 
-		const deal = await deals.byId(dealId);
+		const matter = await matters.byId(matterId);
 
-		expect(deal.contacts).toHaveLength(1);
-		expect(deal.contacts[0]?.role).toBe("Champion");
+		expect(matter.contacts).toHaveLength(1);
+		expect(matter.contacts[0]?.role).toBe("Champion");
 	});
 
 	it("refuses somebody who works somewhere else", async () => {
 		await expect(
-			deals.attachContact({ dealId, contactId: outsiderId }),
+			matters.attachContact({ matterId, contactId: outsiderId }),
 		).rejects.toThrow(`That contact does not work at People Co ${suffix}.`);
 	});
 
 	it("blanks a role rather than storing an empty string", async () => {
-		await deals.setContactRole({ dealId, contactId: championId, role: "  " });
+		await matters.setContactRole({
+			matterId,
+			contactId: championId,
+			role: "  ",
+		});
 
-		const deal = await deals.byId(dealId);
+		const matter = await matters.byId(matterId);
 
-		expect(deal.contacts[0]?.role).toBeNull();
+		expect(matter.contacts[0]?.role).toBeNull();
 	});
 
-	it("will not set a role on somebody who is not on the deal", async () => {
+	it("will not set a role on somebody who is not on the matter", async () => {
 		await expect(
-			deals.setContactRole({
-				dealId,
+			matters.setContactRole({
+				matterId,
 				contactId: colleagueId,
 				role: "Blocker",
 			}),
-		).rejects.toThrow("That contact is not on this deal.");
+		).rejects.toThrow("That contact is not on this matter.");
 	});
 
 	it("takes them off again, leaving the contact in the CRM", async () => {
-		await deals.detachContact({ dealId, contactId: championId });
+		await matters.detachContact({ matterId, contactId: championId });
 
-		const deal = await deals.byId(dealId);
+		const matter = await matters.byId(matterId);
 
-		expect(deal.contacts).toHaveLength(0);
+		expect(matter.contacts).toHaveLength(0);
 		expect(await db.contact.count({ where: { id: championId } })).toBe(1);
 	});
 
 	it("says so when they were never on it", async () => {
 		await expect(
-			deals.detachContact({ dealId, contactId: championId }),
-		).rejects.toThrow("That contact is not on this deal.");
+			matters.detachContact({ matterId, contactId: championId }),
+		).rejects.toThrow("That contact is not on this matter.");
 	});
 });

@@ -16,14 +16,14 @@ const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
 
 export type BuilderResource = {
-	kind: "integration" | "company" | "contact" | "deal";
+	kind: "integration" | "company" | "contact" | "matter";
 	id: string;
 	label: string;
 };
 
 const taggedResource = z
 	.object({
-		kind: z.enum(["integration", "company", "contact", "deal"]),
+		kind: z.enum(["integration", "company", "contact", "matter"]),
 		id: z.string(),
 		label: z.string(),
 	})
@@ -758,8 +758,8 @@ async function describeResources(resources: BuilderResource[]) {
 				});
 				return { ...resource, record: row };
 			}
-			if (resource.kind === "deal") {
-				const row = await db.deal.findUnique({
+			if (resource.kind === "matter") {
+				const row = await db.matter.findUnique({
 					where: { id: resource.id },
 					select: {
 						id: true,

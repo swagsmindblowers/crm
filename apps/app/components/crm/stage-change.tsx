@@ -1,7 +1,7 @@
 "use client";
 
 import ChevronDown from "@carbon/icons-react/es/ChevronDown";
-import type { DealStage } from "@crm/db/enums";
+import type { MatterStage } from "@crm/db/enums";
 import { Button } from "@crm/ui/components/button";
 import {
 	Dialog,
@@ -26,14 +26,14 @@ import { useMutation } from "@tanstack/react-query";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useId, useState } from "react";
 import { toast } from "sonner";
-import { DEAL_STAGE_OPTIONS, LOSING_STAGES } from "@/lib/deal-stage";
+import { LOSING_STAGES, MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
-import { DealStageIndicator } from "./deal-stage";
+import { MatterStageIndicator } from "./matter-stage";
 
 const closeReasonParams = {
-	[SEARCH_PARAM.dialog.closeDeal]: parseAsString,
+	[SEARCH_PARAM.dialog.closeMatter]: parseAsString,
 	[SEARCH_PARAM.dialog.closeStage]: parseAsString,
 };
 
@@ -42,9 +42,9 @@ function useStageMutation(onDone?: () => void) {
 	const cache = useCrmCache();
 
 	return useMutation(
-		trpc.deals.setStage.mutationOptions({
+		trpc.matters.setStage.mutationOptions({
 			onSuccess: async (_, variables) => {
-				await cache.deal(variables.id);
+				await cache.matter(variables.id);
 				onDone?.();
 			},
 			onError: (error) => toast.error(error.message),
@@ -52,13 +52,13 @@ function useStageMutation(onDone?: () => void) {
 	);
 }
 
-export function DealStageMenu({
-	dealId,
+export function MatterStageMenu({
+	matterId,
 	stage,
 	variant = "inline",
 }: {
-	dealId: string;
-	stage: DealStage;
+	matterId: string;
+	stage: MatterStage;
 	variant?: "inline" | "control";
 }) {
 	const [, setCloseParams] = useQueryStates(closeReasonParams);
@@ -74,7 +74,7 @@ export function DealStageMenu({
 						disabled={setStage.isPending}
 						onClick={(event) => event.stopPropagation()}
 					>
-						<DealStageIndicator stage={stage} className="text-foreground" />
+						<MatterStageIndicator stage={stage} className="text-foreground" />
 						<Icon icon={ChevronDown} className="text-muted-foreground" />
 					</Button>
 				) : (
@@ -84,7 +84,7 @@ export function DealStageMenu({
 						disabled={setStage.isPending}
 						className="flex min-w-0 items-center text-left hover:text-foreground disabled:opacity-50"
 					>
-						<DealStageIndicator stage={stage} />
+						<MatterStageIndicator stage={stage} />
 					</button>
 				)}
 			</DropdownMenuTrigger>
@@ -96,19 +96,19 @@ export function DealStageMenu({
 				<DropdownMenuRadioGroup
 					value={stage}
 					onValueChange={(next) => {
-						const chosen = next as DealStage;
+						const chosen = next as MatterStage;
 						if (chosen === stage) return;
 						if (LOSING_STAGES.includes(chosen)) {
 							void setCloseParams({
-								[SEARCH_PARAM.dialog.closeDeal]: dealId,
+								[SEARCH_PARAM.dialog.closeMatter]: matterId,
 								[SEARCH_PARAM.dialog.closeStage]: chosen,
 							});
 							return;
 						}
-						setStage.mutate({ id: dealId, stage: chosen });
+						setStage.mutate({ id: matterId, stage: chosen });
 					}}
 				>
-					{DEAL_STAGE_OPTIONS.map((option) => (
+					{MATTER_STAGE_OPTIONS.map((option) => (
 						<DropdownMenuRadioItem key={option.value} value={option.value}>
 							{option.label}
 						</DropdownMenuRadioItem>
@@ -122,24 +122,24 @@ export function DealStageMenu({
 export function CloseReasonDialog() {
 	const reasonId = useId();
 	const [closeValues, setCloseParams] = useQueryStates(closeReasonParams);
-	const closing = closeValues[SEARCH_PARAM.dialog.closeDeal];
+	const closing = closeValues[SEARCH_PARAM.dialog.closeMatter];
 	const closingStage = closeValues[SEARCH_PARAM.dialog.closeStage];
 	const [reason, setReason] = useState("");
 
 	const close = () => {
 		setReason("");
 		void setCloseParams({
-			[SEARCH_PARAM.dialog.closeDeal]: null,
+			[SEARCH_PARAM.dialog.closeMatter]: null,
 			[SEARCH_PARAM.dialog.closeStage]: null,
 		});
 	};
 
 	const setStage = useStageMutation(() => {
-		toast.success("Deal closed.");
+		toast.success("Matter closed.");
 		close();
 	});
 
-	const stage = closingStage as DealStage | null;
+	const stage = closingStage as MatterStage | null;
 	const open = Boolean(closing && stage);
 
 	return (
@@ -147,12 +147,12 @@ export function CloseReasonDialog() {
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>
-						{stage === "CLOSED_LOST" ? "Close as lost" : "Mark as unqualified"}
+						{stage === "REFUSED" ? "Close as lost" : "Mark as unqualified"}
 					</DialogTitle>
 					<DialogDescription>
-						{stage === "CLOSED_LOST"
+						{stage === "REFUSED"
 							? "What did we lose it to? This is the only place that answer gets recorded."
-							: "Why is this not a fit? It goes on the timeline so nobody re-runs the same deal."}
+							: "Why is this not a fit? It goes on the timeline so nobody re-runs the same matter."}
 					</DialogDescription>
 				</DialogHeader>
 

@@ -5,9 +5,9 @@ import { resolveFavicon } from "../src/favicon";
 import { fieldKeyFromLabel } from "../src/fields-shape";
 import {
 	ActivityType,
-	DealStage,
 	type FieldEntity,
 	FieldType,
+	MatterStage,
 	RateSource,
 } from "../src/generated/prisma/enums";
 import { readReportingCurrency, SETTINGS_ID } from "../src/settings";
@@ -250,23 +250,23 @@ const TITLES = [
 ] as const;
 
 const OPEN_STAGES = [
-	DealStage.DEMO_BOOKED,
-	DealStage.QUALIFIED_TO_BUY,
-	DealStage.DECISION_MAKER_BOUGHT_IN,
-	DealStage.CONTRACT_SENT,
+	MatterStage.ENQUIRY,
+	MatterStage.INSTRUCTED,
+	MatterStage.PREPARING_APPLICATION,
+	MatterStage.SUBMITTED,
 ] as const;
 
 const CLOSED_STAGES = [
-	DealStage.CLOSED_WON,
-	DealStage.CLOSED_LOST,
-	DealStage.UNQUALIFIED_TO_BUY,
+	MatterStage.GRANTED,
+	MatterStage.REFUSED,
+	MatterStage.WITHDRAWN,
 ] as const;
 
-const DEAL_DESCRIPTIONS = [
+const MATTER_DESCRIPTIONS = [
 	"Replacing a spreadsheet-and-Drive evidence process before their first SOC 2 audit. Security owns the decision, finance signs.",
 	"Expansion onto the platform team after the security org went live. Blocked on whether the current contract can be co-termed.",
 	"Inbound from a failed vendor renewal. They want automated evidence collection and one auditor-ready report.",
-	"Their enterprise deals keep stalling on security questionnaires. The buying trigger is the pipeline, not the audit.",
+	"Their enterprise matters keep stalling on security questionnaires. The buying trigger is the pipeline, not the audit.",
 	"Champion ran the evaluation themselves and wants the agent, not the checklist. Procurement is the long pole.",
 ] as const;
 
@@ -696,7 +696,7 @@ async function seedContacts(
 	return contacts;
 }
 
-type SeededDeal = {
+type SeededMatter = {
 	id: string;
 	companyId: string;
 	ownerId: string;
@@ -713,7 +713,7 @@ const SEED_RATES: SeedRates = {
 	JPY: 0.0067,
 };
 
-const DEAL_CURRENCIES = ["USD", "USD", "USD", "EUR", "GBP", "JPY", "CAD"];
+const MATTER_CURRENCIES = ["USD", "USD", "USD", "EUR", "GBP", "JPY", "CAD"];
 
 let seedBase = "USD";
 
@@ -735,7 +735,7 @@ async function seedRates(): Promise<number> {
 	if (seedBase !== "USD") {
 		console.log(
 			`Reporting currency is ${seedBase} — seeding a converted figure only for ` +
-				`deals already in ${seedBase}; the rates cron converts the rest.`,
+				`matters already in ${seedBase}; the rates cron converts the rest.`,
 		);
 	}
 
@@ -784,18 +784,18 @@ function money(usdAmount: number, currency: string) {
 	};
 }
 
-async function seedDeals(
+async function seedMatters(
 	companies: { id: string; name: string }[],
 	contacts: SeededContact[],
 	ownerIds: string[],
-): Promise<SeededDeal[]> {
-	const deals: SeededDeal[] = [];
+): Promise<SeededMatter[]> {
+	const matters: SeededMatter[] = [];
 
 	for (const [index, company] of companies.entries()) {
 		const count = index % 2 === 0 ? 2 : 1;
 
 		for (let n = 0; n < count; n++) {
-			const id = `seed-deal-${slug(company.name)}-${n}`;
+			const id = `seed-matter-${slug(company.name)}-${n}`;
 			const closed = chance(0.35);
 			const stage = closed ? pick(CLOSED_STAGES) : pick(OPEN_STAGES);
 			const ownerId = pick(ownerIds);
@@ -809,7 +809,7 @@ async function seedDeals(
 				12,
 			);
 
-			await db.deal.upsert({
+			await db.matter.upsert({
 				where: { id },
 				create: {
 					id,
@@ -817,14 +817,14 @@ async function seedDeals(
 						n === 0
 							? `${company.name} — Comp AI`
 							: `${company.name} — expansion`,
-					description: pick(DEAL_DESCRIPTIONS),
+					description: pick(MATTER_DESCRIPTIONS),
 					companyId: company.id,
 					ownerId,
 					stage,
 					stageChangedAt,
 					...(() => {
 						const { amount, currency, baseAmount, baseCurrency, fxRate } =
-							money(integer(6, 90) * 1000, pick(DEAL_CURRENCIES));
+							money(integer(6, 90) * 1000, pick(MATTER_CURRENCIES));
 						return {
 							amount,
 							currency,
@@ -841,8 +841,7 @@ async function seedDeals(
 					),
 					closedAt: closed ? stageChangedAt : null,
 					closedReason:
-						stage === DealStage.CLOSED_LOST ||
-						stage === DealStage.UNQUALIFIED_TO_BUY
+						stage === MatterStage.REFUSED || stage === MatterStage.WITHDRAWN
 							? pick(LOST_REASONS)
 							: null,
 					createdAt,
@@ -854,10 +853,12 @@ async function seedDeals(
 				(contact) => contact.companyId === company.id,
 			);
 			for (const contact of companyContacts.slice(0, integer(1, 2))) {
-				await db.dealContact.upsert({
-					where: { dealId_contactId: { dealId: id, contactId: contact.id } },
+				await db.matterContact.upsert({
+					where: {
+						matterId_contactId: { matterId: id, contactId: contact.id },
+					},
 					create: {
-						dealId: id,
+						matterId: id,
 						contactId: contact.id,
 						role: chance(0.5) ? "Champion" : "Decision maker",
 					},
@@ -865,17 +866,17 @@ async function seedDeals(
 				});
 			}
 
-			deals.push({ id, companyId: company.id, ownerId, closed });
+			matters.push({ id, companyId: company.id, ownerId, closed });
 		}
 	}
 
-	return deals;
+	return matters;
 }
 
 async function seedActivities(
 	companies: { id: string }[],
 	contacts: SeededContact[],
-	deals: SeededDeal[],
+	matters: SeededMatter[],
 	ownerIds: string[],
 ): Promise<number> {
 	const existing = await db.activity.count();
@@ -893,10 +894,10 @@ async function seedActivities(
 		completedAt: Date | null;
 		companyId: string | null;
 		contactId: string | null;
-		dealId: string | null;
+		matterId: string | null;
 		createdById: string;
 		createdAt: Date;
-		meta?: { from: DealStage; to: DealStage };
+		meta?: { from: MatterStage; to: MatterStage };
 	};
 
 	const rows: ActivityRow[] = [];
@@ -904,7 +905,7 @@ async function seedActivities(
 	const base = (companyId: string, createdById: string, createdAt: Date) => ({
 		companyId,
 		contactId: null,
-		dealId: null,
+		matterId: null,
 		occurredAt: null,
 		dueAt: null,
 		completedAt: null,
@@ -914,8 +915,10 @@ async function seedActivities(
 		createdAt,
 	});
 
-	for (const deal of deals) {
-		const dealContacts = contacts.filter((c) => c.companyId === deal.companyId);
+	for (const matter of matters) {
+		const matterContacts = contacts.filter(
+			(c) => c.companyId === matter.companyId,
+		);
 
 		for (let n = 0; n < integer(3, 6); n++) {
 			const at = daysFromNow(-integer(2, 120), 18);
@@ -927,10 +930,10 @@ async function seedActivities(
 			]);
 
 			rows.push({
-				...base(deal.companyId, deal.ownerId, at),
+				...base(matter.companyId, matter.ownerId, at),
 				type,
-				dealId: deal.id,
-				contactId: dealContacts.length > 0 ? pick(dealContacts).id : null,
+				matterId: matter.id,
+				contactId: matterContacts.length > 0 ? pick(matterContacts).id : null,
 				subject:
 					type === ActivityType.CALL
 						? pick(CALL_SUBJECTS)
@@ -945,19 +948,23 @@ async function seedActivities(
 		}
 
 		rows.push({
-			...base(deal.companyId, deal.ownerId, daysFromNow(-integer(1, 20), 12)),
+			...base(
+				matter.companyId,
+				matter.ownerId,
+				daysFromNow(-integer(1, 20), 12),
+			),
 			type: ActivityType.STAGE_CHANGE,
-			dealId: deal.id,
+			matterId: matter.id,
 			subject: "Stage changed",
 			meta: {
-				from: DealStage.DEMO_BOOKED,
-				to: deal.closed ? DealStage.CLOSED_WON : DealStage.QUALIFIED_TO_BUY,
+				from: MatterStage.ENQUIRY,
+				to: matter.closed ? MatterStage.GRANTED : MatterStage.INSTRUCTED,
 			},
 		});
 	}
 
-	for (const deal of deals) {
-		if (deal.closed) continue;
+	for (const matter of matters) {
+		if (matter.closed) continue;
 
 		for (let n = 0; n < integer(1, 3); n++) {
 			const roll = random();
@@ -968,9 +975,13 @@ async function seedActivities(
 				: daysFromNow(integer(1, 21), 6);
 
 			rows.push({
-				...base(deal.companyId, deal.ownerId, daysFromNow(-integer(1, 30), 12)),
+				...base(
+					matter.companyId,
+					matter.ownerId,
+					daysFromNow(-integer(1, 30), 12),
+				),
 				type: ActivityType.TASK,
-				dealId: deal.id,
+				matterId: matter.id,
 				subject: pick(TASK_SUBJECTS),
 				dueAt: done ? daysFromNow(-integer(1, 20), 6) : dueAt,
 				completedAt: done ? daysFromNow(-integer(1, 10), 6) : null,
@@ -996,14 +1007,19 @@ async function main() {
 	const ownerIds = await seedOwners();
 	const companies = await seedCompanies(ownerIds);
 	const contacts = await seedContacts(companies, ownerIds);
-	const deals = await seedDeals(companies, contacts, ownerIds);
-	const activities = await seedActivities(companies, contacts, deals, ownerIds);
+	const matters = await seedMatters(companies, contacts, ownerIds);
+	const activities = await seedActivities(
+		companies,
+		contacts,
+		matters,
+		ownerIds,
+	);
 	const companyFields = await seedCompanyFields();
 	await seedCompanyFieldValues(companyFields, companies, ownerIds);
 
 	console.log(
 		`Seeded ${companies.length} companies, ${contacts.length} contacts, ` +
-			`${deals.length} deals, ${activities} activities, ${rates} exchange rates, ` +
+			`${matters.length} matters, ${activities} activities, ${rates} exchange rates, ` +
 			"7 company fields.",
 	);
 }

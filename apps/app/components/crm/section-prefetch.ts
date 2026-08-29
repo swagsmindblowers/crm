@@ -4,10 +4,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { companiesSearchParams } from "@/app/(app)/[slug]/companies/companies-search-params";
 import { contactsSearchParams } from "@/app/(app)/[slug]/contacts/contacts-search-params";
-import { dealsSearchParams } from "@/app/(app)/[slug]/deals/deals-search-params";
+import { mattersSearchParams } from "@/app/(app)/[slug]/matters/matters-search-params";
 import { useTRPC } from "@/lib/trpc/client";
 
-export type Section = "/" | "/companies" | "/contacts" | "/deals" | "/settings";
+export type Section =
+	| "/"
+	| "/companies"
+	| "/contacts"
+	| "/matters"
+	| "/settings";
 
 export function usePrefetchSection(): (section: string) => void {
 	const trpc = useTRPC();
@@ -35,9 +40,9 @@ export function usePrefetchSection(): (section: string) => void {
 						),
 					);
 					return;
-				case "/deals":
+				case "/matters":
 					void queryClient.prefetchQuery(
-						trpc.deals.list.queryOptions(dealsSearchParams.defaultInput()),
+						trpc.matters.list.queryOptions(mattersSearchParams.defaultInput()),
 					);
 					return;
 				default:

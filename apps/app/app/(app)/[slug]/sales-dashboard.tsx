@@ -18,7 +18,7 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AreaTrend, DonutStat } from "@/components/dashboard-charts";
-import { dealStageColor, dealStageLabel } from "@/lib/deal-stage";
+import { matterStageColor, matterStageLabel } from "@/lib/matter-stage";
 import type { RouterOutputs } from "@/lib/trpc/types";
 import { useWorkspaceUrl } from "@/lib/use-workspace-url";
 
@@ -68,9 +68,9 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 			? [
 					{
 						key: stage.stage,
-						label: dealStageLabel(stage.stage),
+						label: matterStageLabel(stage.stage),
 						value: stage.valueCents,
-						color: dealStageColor(stage.stage),
+						color: matterStageColor(stage.stage),
 						count: stage.count,
 					},
 				]
@@ -88,12 +88,12 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 						wonPrevMonth.valueCents,
 						"vs. last month",
 					)}
-					description={`${formatCount(wonThisMonth.count, "deal")} · ${money(wonPrevMonth.valueCents)} last month`}
+					description={`${formatCount(wonThisMonth.count, "matter")} · ${money(wonPrevMonth.valueCents)} last month`}
 				/>
 				<StatCard
 					label="Open pipeline"
 					value={money(pipeline.totalCents)}
-					description={`${formatCount(pipeline.totalDeals, "deal")} in progress · ${money(closingThisMonthTotal.valueCents)} due this month`}
+					description={`${formatCount(pipeline.totalMatters, "matter")} in progress · ${money(closingThisMonthTotal.valueCents)} due this month`}
 				/>
 				<StatCard
 					label={`Win rate (${performance.windowDays}d)`}
@@ -109,11 +109,11 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 					}
 				/>
 				<StatCard
-					label={`Average deal (${performance.windowDays}d)`}
+					label={`Average matter (${performance.windowDays}d)`}
 					value={
-						performance.avgDealCents === null
+						performance.avgMatterCents === null
 							? "—"
-							: money(performance.avgDealCents)
+							: money(performance.avgMatterCents)
 					}
 					description={
 						performance.avgCycleDays === null
@@ -126,7 +126,7 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 			{unconverted.count > 0 ? (
 				<p className="text-muted-foreground text-xs">
 					Every figure above is in {reportingCurrency}.{" "}
-					{formatCount(unconverted.count, "deal")} in{" "}
+					{formatCount(unconverted.count, "matter")} in{" "}
 					{unconverted.currencies.join(", ")}{" "}
 					{unconverted.count === 1 ? "is" : "are"} not included — there is no
 					rate to convert {unconverted.currencies.length === 1 ? "it" : "them"}{" "}
@@ -144,7 +144,7 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 			<DashboardRow split="hero">
 				<ChartPanel
 					title="Closed won vs. new pipeline"
-					description="Last six months, by the month a deal closed or was created"
+					description="Last six months, by the month a matter closed or was created"
 				>
 					{hasTrend ? (
 						<div className="flex flex-1 flex-col justify-center py-4">
@@ -160,7 +160,7 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 							/>
 						</div>
 					) : (
-						<EmptyChart label="No deals closed or created yet" />
+						<EmptyChart label="No matters closed or created yet" />
 					)}
 				</ChartPanel>
 
@@ -181,7 +181,7 @@ export function SalesDashboard({ summary }: { summary: Summary }) {
 								{stageSlices.map((slice) => (
 									<li key={slice.key} className="border-t first:border-t-0">
 										<Link
-											href={`${workspaceUrl("/deals")}?stage=${slice.key}`}
+											href={`${workspaceUrl("/matters")}?stage=${slice.key}`}
 											className="flex items-center gap-2.5 py-2 text-xs hover:underline"
 										>
 											<span

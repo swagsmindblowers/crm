@@ -129,7 +129,7 @@ export function NewAgentDialog({ children }: { children: React.ReactNode }) {
 						<Textarea
 							id="agent-job"
 							onChange={(event) => setJob(event.target.value)}
-							placeholder="A week before a renewal, gather the account history and post a short brief for whoever owns the deal."
+							placeholder="A week before a renewal, gather the account history and post a short brief for whoever owns the matter."
 							rows={3}
 							value={job}
 						/>
@@ -152,8 +152,8 @@ export function NewAgentDialog({ children }: { children: React.ReactNode }) {
 						<p className="text-muted-foreground text-xs">
 							{channel
 								? channel.isMember
-									? `Comp AI is already in #${channel.name}.`
-									: `Comp AI is not in #${channel.name} yet. It joins when you create this.`
+									? `MyLegalXpert is already in #${channel.name}.`
+									: `MyLegalXpert is not in #${channel.name} yet. It joins when you create this.`
 								: "Leave this empty and the builder will ask."}
 						</p>
 					</div>

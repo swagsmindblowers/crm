@@ -11,7 +11,7 @@ import { readReportingCurrency } from "@crm/db/settings";
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectDatabase } from "../database/database.constants";
 
-export interface DealFxFields {
+export interface MatterFxFields {
 	baseAmount: PrismaTypes.Decimal | null;
 	baseCurrency: string | null;
 	fxRate: PrismaTypes.Decimal | null;
@@ -56,10 +56,10 @@ export class ConversionService {
 		);
 	}
 
-	async dealFields(
+	async matterFields(
 		amount: PrismaTypes.Decimal | null,
 		currency: string,
-	): Promise<DealFxFields> {
+	): Promise<MatterFxFields> {
 		const converted = await this.convert(amount, currency);
 
 		if (!converted) {
@@ -79,11 +79,11 @@ export class ConversionService {
 		};
 	}
 
-	countedWhere(base: string): PrismaTypes.DealWhereInput {
+	countedWhere(base: string): PrismaTypes.MatterWhereInput {
 		return { baseAmount: { not: null }, baseCurrency: base };
 	}
 
-	pendingWhere(base: string): PrismaTypes.DealWhereInput {
+	pendingWhere(base: string): PrismaTypes.MatterWhereInput {
 		return {
 			amount: { not: null },
 			OR: [
@@ -95,11 +95,11 @@ export class ConversionService {
 	}
 
 	async unconverted(
-		where: PrismaTypes.DealWhereInput = {},
+		where: PrismaTypes.MatterWhereInput = {},
 	): Promise<Unconverted> {
 		const base = await this.reportingCurrency();
 
-		const rows = await this.db.deal.groupBy({
+		const rows = await this.db.matter.groupBy({
 			by: ["currency"],
 			where: { AND: [where, this.pendingWhere(base)] },
 			_count: { _all: true },
@@ -125,7 +125,7 @@ export class ConversionService {
 	private async rerate(onlyMissing: boolean): Promise<RerateResult> {
 		const base = await this.reportingCurrency();
 
-		const groups = await this.db.deal.groupBy({
+		const groups = await this.db.matter.groupBy({
 			by: ["currency"],
 			where: onlyMissing ? this.pendingWhere(base) : { amount: { not: null } },
 			_count: { _all: true },
@@ -158,8 +158,8 @@ export class ConversionService {
 
 		this.logger.log({
 			message: onlyMissing
-				? "Filled in deal amounts that had no rate"
-				: "Re-rated every deal against the reporting currency",
+				? "Filled in matter amounts that had no rate"
+				: "Re-rated every matter against the reporting currency",
 			base,
 			converted,
 			cleared,
@@ -183,7 +183,7 @@ export class ConversionService {
 			: Prisma.empty;
 
 		return this.db.$executeRaw`
-			UPDATE "deal"
+			UPDATE "matter"
 			SET "baseAmount" = ROUND("amount" * ${value}::numeric, ${places}::int),
 			    "baseCurrency" = ${base},
 			    "fxRate" = ${value}::numeric,
@@ -196,7 +196,7 @@ export class ConversionService {
 
 	private async clear(code: string): Promise<number> {
 		return this.db.$executeRaw`
-			UPDATE "deal"
+			UPDATE "matter"
 			SET "baseAmount" = NULL,
 			    "baseCurrency" = NULL,
 			    "fxRate" = NULL,

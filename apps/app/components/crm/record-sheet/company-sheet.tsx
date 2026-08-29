@@ -35,7 +35,7 @@ import {
 } from "@/components/crm/inline-field";
 import { OwnerCell } from "@/components/crm/owner-cell";
 import { CompanySocials } from "@/components/crm/social-links";
-import { DealStageMenu } from "@/components/crm/stage-change";
+import { MatterStageMenu } from "@/components/crm/stage-change";
 import { Timeline } from "@/components/crm/timeline/timeline";
 import { WebsiteActivity } from "@/components/crm/website-activity";
 import {
@@ -53,26 +53,26 @@ import {
 	type DetailSheetTab,
 } from "@/components/detail-sheet";
 import { LocalDay } from "@/components/local-date-time";
-import { OPEN_STAGES } from "@/lib/deal-stage";
 import { ENRICHMENT_POLL_MS, isEnriching } from "@/lib/enrichment-status";
+import { OPEN_STAGES } from "@/lib/matter-stage";
 import { savingField } from "@/lib/pending-field";
 import { hasCompanyLinks } from "@/lib/social-links";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
-import { QuickAddContact, QuickAddDeal } from "./quick-add";
+import { QuickAddContact, QuickAddMatter } from "./quick-add";
 import { RecordActions } from "./record-actions";
 import {
 	AddRow,
-	DealAmount,
 	DomainLink,
+	MatterAmount,
 	MetaLine,
 	RecordSheetFrame,
 } from "./record-parts";
 import { useOpenRecord, useRecordSheetView } from "./record-stack";
 
 type Company = RouterOutputs["companies"]["byId"];
-type CompanyDeal = Company["deals"][number];
+type CompanyMatter = Company["matters"][number];
 
 const UNASSIGNED = "unassigned";
 
@@ -85,12 +85,12 @@ function pendingFields(company: Company): string[] {
 }
 
 function companyConsequence(company: Company): string {
-	const deals = company.deals.length;
+	const matters = company.matters.length;
 	const contacts = company.contacts.length;
 
 	const gone =
-		deals > 0
-			? `${deals === 1 ? "Its one deal" : `All ${deals} of its deals`} and everything filed against the account go too.`
+		matters > 0
+			? `${matters === 1 ? "Its one matter" : `All ${matters} of its matters`} and everything filed against the account go too.`
 			: "Everything filed against the account goes too.";
 
 	const kept =
@@ -109,8 +109,8 @@ const CONTACT_COLUMNS = [
 	{ id: "owner", header: "Owner", width: "w-[22%]" },
 ];
 
-const DEAL_COLUMNS = [
-	{ id: "deal", header: "Deal", width: "w-[32%]", className: "pl-5" },
+const MATTER_COLUMNS = [
+	{ id: "matter", header: "Matter", width: "w-[32%]", className: "pl-5" },
 	{ id: "stage", header: "Stage", width: "w-[24%]" },
 	{
 		id: "amount",
@@ -122,9 +122,9 @@ const DEAL_COLUMNS = [
 	{ id: "owner", header: "Owner", width: "w-[14%]" },
 ];
 
-function nextClose(deals: CompanyDeal[]): string | null {
-	const dates = deals
-		.map((deal) => deal.expectedCloseDate)
+function nextClose(matters: CompanyMatter[]): string | null {
+	const dates = matters
+		.map((matter) => matter.expectedCloseDate)
 		.filter((date): date is string => date !== null)
 		.sort();
 	return dates[0] ?? null;
@@ -157,16 +157,17 @@ export function CompanySheet({ companyId }: { companyId: string }) {
 				.join(", ")
 		: null;
 
-	const openDeals =
-		company?.deals.filter((deal) => OPEN_STAGES.includes(deal.stage)) ?? [];
-	const openValueCents = openDeals.reduce(
-		(total, deal) => total + (deal.baseAmountCents ?? 0),
+	const openMatters =
+		company?.matters.filter((matter) => OPEN_STAGES.includes(matter.stage)) ??
+		[];
+	const openValueCents = openMatters.reduce(
+		(total, matter) => total + (matter.baseAmountCents ?? 0),
 		0,
 	);
-	const openUncounted = openDeals.filter(
-		(deal) => deal.amountCents !== null && deal.baseAmountCents === null,
+	const openUncounted = openMatters.filter(
+		(matter) => matter.amountCents !== null && matter.baseAmountCents === null,
 	).length;
-	const closing = nextClose(openDeals);
+	const closing = nextClose(openMatters);
 
 	const tabs: DetailSheetTab[] = company
 		? [
@@ -189,14 +190,14 @@ export function CompanySheet({ companyId }: { companyId: string }) {
 					),
 				},
 				{
-					value: "deals",
-					label: "Deals",
-					count: company.deals.length,
+					value: "matters",
+					label: "Matters",
+					count: company.matters.length,
 					content: (
-						<CompanyDeals
+						<CompanyMatters
 							company={company}
-							adding={adding === "deal"}
-							onAdd={() => setAdding("deal")}
+							adding={adding === "matter"}
+							onAdd={() => setAdding("matter")}
 							onDone={() => setAdding(null)}
 						/>
 					),
@@ -278,8 +279,8 @@ export function CompanySheet({ companyId }: { companyId: string }) {
 								</span>
 							) : null}
 						</DetailSheetStat>
-						<DetailSheetStat label="Open deals">
-							<span className="tabular-nums">{openDeals.length}</span>
+						<DetailSheetStat label="Open matters">
+							<span className="tabular-nums">{openMatters.length}</span>
 						</DetailSheetStat>
 						<DetailSheetStat label="Next close">
 							{closing ? <LocalDay date={closing} /> : <EmptyCellValue />}
@@ -554,7 +555,7 @@ function CompanyContacts({
 	);
 }
 
-function CompanyDeals({
+function CompanyMatters({
 	company,
 	adding,
 	onAdd,
@@ -568,7 +569,7 @@ function CompanyDeals({
 	const openRecord = useOpenRecord();
 
 	const form = adding ? (
-		<QuickAddDeal
+		<QuickAddMatter
 			companyId={company.id}
 			companyName={company.name}
 			ownerId={company.owner?.id ?? null}
@@ -576,19 +577,19 @@ function CompanyDeals({
 		/>
 	) : null;
 
-	if (company.deals.length === 0) {
+	if (company.matters.length === 0) {
 		return (
 			<>
 				{form}
 				{adding ? null : (
 					<DetailSheetEmpty
 						icon={Partnership}
-						title="No deals yet"
+						title="No matters yet"
 						description={`Nothing is being sold to ${company.name} right now. Open one and it joins the pipeline and the forecast.`}
 						action={
 							<Button variant="outline" size="sm" onClick={onAdd}>
 								<Icon icon={Add} data-icon="inline-start" />
-								New deal
+								New matter
 							</Button>
 						}
 					/>
@@ -600,41 +601,41 @@ function CompanyDeals({
 	return (
 		<>
 			{form}
-			<SimpleTable variant="panel" columns={DEAL_COLUMNS}>
-				{company.deals.map((deal) => (
+			<SimpleTable variant="panel" columns={MATTER_COLUMNS}>
+				{company.matters.map((matter) => (
 					<SimpleTableRow
-						key={deal.id}
+						key={matter.id}
 						clickable
-						onClick={() => openRecord({ kind: "deal", id: deal.id })}
+						onClick={() => openRecord({ kind: "matter", id: matter.id })}
 					>
 						<TableCell className="truncate py-2.5 pr-3 pl-5 font-medium">
-							{deal.name}
+							{matter.name}
 						</TableCell>
 						<TableCell className="px-3 py-2.5">
-							<DealStageMenu dealId={deal.id} stage={deal.stage} />
+							<MatterStageMenu matterId={matter.id} stage={matter.stage} />
 						</TableCell>
 						<TableCell className="px-3 py-2.5 text-right">
-							<DealAmount
-								amountCents={deal.amountCents}
-								currency={deal.currency}
+							<MatterAmount
+								amountCents={matter.amountCents}
+								currency={matter.currency}
 							/>
 						</TableCell>
 						<TableCell className="px-3 py-2.5 text-muted-foreground">
-							{deal.expectedCloseDate ? (
-								<LocalDay date={deal.expectedCloseDate} />
+							{matter.expectedCloseDate ? (
+								<LocalDay date={matter.expectedCloseDate} />
 							) : (
 								<EmptyCellValue />
 							)}
 						</TableCell>
 						<TableCell className="px-3 py-2.5">
-							<OwnerCell owner={deal.owner} />
+							<OwnerCell owner={matter.owner} />
 						</TableCell>
 					</SimpleTableRow>
 				))}
 
 				<AddRow
-					label="New deal"
-					columns={DEAL_COLUMNS.length}
+					label="New matter"
+					columns={MATTER_COLUMNS.length}
 					onClick={onAdd}
 				/>
 			</SimpleTable>

@@ -23,6 +23,7 @@ const agent = {
 	contactCreated: async () => true,
 	companyCreated: async () => undefined,
 	withCrmEvents: withDiscardedCrmEvents,
+	conflictCheckRequested: async () => false,
 	companyRequested: async () => true,
 } as unknown as AgentTriggerService;
 

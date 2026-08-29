@@ -29,7 +29,7 @@ import {
 export type TimelineAnchor =
 	| { companyId: string }
 	| { contactId: string }
-	| { dealId: string };
+	| { matterId: string };
 
 const TAB_LABELS = {
 	all: "All",

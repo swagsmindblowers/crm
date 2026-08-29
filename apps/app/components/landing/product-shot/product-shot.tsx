@@ -13,7 +13,7 @@ const RAIL = [
 	{ icon: Dashboard, label: "Overview", active: false },
 	{ icon: Building, label: "Companies", active: true },
 	{ icon: Group, label: "Contacts", active: false },
-	{ icon: Partnership, label: "Deals", active: false },
+	{ icon: Partnership, label: "Matters", active: false },
 	{ icon: Settings, label: "Settings", active: false },
 ];
 
@@ -61,7 +61,7 @@ function AppHeader() {
 				</span>
 				<span className="mx-1 h-5 w-px shrink-0" />
 				<span className="line-clamp-1 font-medium text-sm/[142%]">
-					Comp AI CRM
+					MyLegalXpert
 				</span>
 			</div>
 

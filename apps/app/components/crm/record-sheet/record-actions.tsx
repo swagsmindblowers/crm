@@ -36,14 +36,14 @@ import {
 const NOUN = {
 	company: "company",
 	contact: "contact",
-	deal: "deal",
+	matter: "matter",
 } satisfies Record<RecordKind, string>;
 
 const RECORD_PROCEDURES = {
 	company: "companies",
 	contact: "contacts",
-	deal: "deals",
-} satisfies Record<RecordKind, "companies" | "contacts" | "deals">;
+	matter: "matters",
+} satisfies Record<RecordKind, "companies" | "contacts" | "matters">;
 
 function useArchiveRecord(record: RecordRef) {
 	const trpc = useTRPC();

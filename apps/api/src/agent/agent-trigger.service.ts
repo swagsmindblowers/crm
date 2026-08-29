@@ -176,7 +176,7 @@ export class AgentTriggerService {
 		return this.enqueue(
 			{
 				kind: "slack-channel-join",
-				reason: `Add Comp AI to #${channelName}`,
+				reason: `Add MyLegalXpert to #${channelName}`,
 				priority: PRIORITY.slackJoin,
 				budget: 1,
 				subject: { path: ["channelId"], value: channelId },
@@ -443,10 +443,25 @@ export class AgentTriggerService {
 		}
 	}
 
+	async conflictCheckRequested(
+		target: { contactId?: string; matterId?: string },
+		reason: string,
+	): Promise<boolean> {
+		return this.enqueue({
+			contactId: target.contactId,
+			matterId: target.matterId,
+			kind: "conflict-check",
+			reason,
+			priority: PRIORITY.conflict,
+			budget: 1,
+		});
+	}
+
 	private async enqueue(
 		task: {
 			contactId?: string;
 			companyId?: string;
+			matterId?: string;
 			kind: string;
 			reason: string;
 			priority: number;
@@ -461,7 +476,7 @@ export class AgentTriggerService {
 			const write = async (tx: Prisma.TransactionClient) => {
 				await lockIdempotencyKey(
 					tx,
-					`agent-task:${task.kind}:${task.contactId ?? ""}:${task.companyId ?? ""}:${task.subject?.value ?? ""}`,
+					`agent-task:${task.kind}:${task.contactId ?? ""}:${task.companyId ?? ""}:${task.matterId ?? ""}:${task.subject?.value ?? ""}`,
 				);
 				const pending = await tx.agentTask.findFirst({
 					where: {
@@ -469,6 +484,7 @@ export class AgentTriggerService {
 						finishedAt: null,
 						contactId: task.contactId ?? undefined,
 						companyId: task.companyId ?? undefined,
+						matterId: task.matterId ?? undefined,
 						payload: task.subject
 							? { path: task.subject.path, equals: task.subject.value }
 							: undefined,
@@ -481,6 +497,7 @@ export class AgentTriggerService {
 					data: {
 						contactId: task.contactId ?? null,
 						companyId: task.companyId ?? null,
+						matterId: task.matterId ?? null,
 						kind: task.kind,
 						reason: task.reason,
 						priority: task.priority,
@@ -524,7 +541,7 @@ export class AgentTriggerService {
 		const recordIds = {
 			contactId: input.record.kind === "contact" ? input.record.id : null,
 			companyId: input.record.kind === "company" ? input.record.id : null,
-			dealId: input.record.kind === "deal" ? input.record.id : null,
+			matterId: input.record.kind === "matter" ? input.record.id : null,
 		};
 		await tx.agentTask.create({
 			data: {

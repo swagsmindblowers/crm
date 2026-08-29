@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { anchorResults } from "../lib/agent-results";
 import {
-	type DealListResult,
-	dealListResultOf,
-	groupDealListPages,
+	groupMatterListPages,
+	type MatterListResult,
+	matterListResultOf,
 	type TranscriptItem,
 } from "../lib/agent-transcript";
 
@@ -15,7 +15,7 @@ const page = (status: string, ids: string[]) => ({
 		companyId: null,
 		ownerId: null,
 	},
-	deals: ids.map((id) => ({
+	matters: ids.map((id) => ({
 		id,
 		name: id,
 		stage: "Discovery",
@@ -35,14 +35,14 @@ const did = (
 ): TranscriptItem => ({
 	kind: "did",
 	id,
-	label: "Listed deals",
+	label: "Listed matters",
 	input: null,
 	output,
 	errorText: null,
 	tone: "neutral",
 	pending: false,
 	sources: [],
-	tool: "list_deals",
+	tool: "list_matters",
 	...extra,
 });
 
@@ -53,17 +53,17 @@ const said = (id: string, text: string): TranscriptItem => ({
 	text,
 });
 
-const anchorDeals = (items: readonly TranscriptItem[]) =>
-	anchorResults<DealListResult>({
+const anchorMatters = (items: readonly TranscriptItem[]) =>
+	anchorResults<MatterListResult>({
 		items,
-		tool: "list_deals",
-		validate: dealListResultOf,
-		group: groupDealListPages,
+		tool: "list_matters",
+		validate: matterListResultOf,
+		group: groupMatterListPages,
 	});
 
 describe("anchorResults", () => {
 	it("leaves a finished result under its own call when a pending one follows", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"])),
 			did("b", null, { pending: true, output: null }),
 		]);
@@ -72,7 +72,7 @@ describe("anchorResults", () => {
 	});
 
 	it("never anchors to a failed call", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"])),
 			did("b", { broken: true }, { tone: "warning", errorText: "Nope." }),
 		]);
@@ -81,7 +81,7 @@ describe("anchorResults", () => {
 	});
 
 	it("keeps two different criteria under their own calls", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"])),
 			said("t", "And the won ones:"),
 			did("b", page("WON", ["d2"])),
@@ -93,20 +93,20 @@ describe("anchorResults", () => {
 	});
 
 	it("anchors paginated pages of one criteria to the final page", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"])),
 			did("b", page("OPEN", ["d2"])),
 		]);
 
 		expect([...anchored.keys()]).toEqual(["b"]);
-		expect(anchored.get("b")?.[0]?.deals.map((deal) => deal.id)).toEqual([
+		expect(anchored.get("b")?.[0]?.matters.map((matter) => matter.id)).toEqual([
 			"d1",
 			"d2",
 		]);
 	});
 
 	it("anchors pagination to the last valid page, not a later failure", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"])),
 			did("b", page("OPEN", ["d2"])),
 			did("c", { broken: true }),
@@ -116,7 +116,7 @@ describe("anchorResults", () => {
 	});
 
 	it("ignores calls belonging to another tool", () => {
-		const anchored = anchorDeals([
+		const anchored = anchorMatters([
 			did("a", page("OPEN", ["d1"]), { tool: "list_companies" }),
 		]);
 

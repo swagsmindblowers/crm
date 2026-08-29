@@ -21,7 +21,7 @@ export const SEARCH_PARAM = {
 	dialog: {
 		create: "new",
 		switcher: "k",
-		closeDeal: "closeDeal",
+		closeMatter: "closeMatter",
 		closeStage: "closeStage",
 	},
 	overview: {

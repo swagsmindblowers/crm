@@ -31,12 +31,12 @@ import Link from "next/link";
 import { useQueryState } from "nuqs";
 import type { CSSProperties, ReactNode } from "react";
 import { toast } from "sonner";
-import { DealStageIndicator } from "@/components/crm/deal-stage";
+import { MatterStageIndicator } from "@/components/crm/matter-stage";
 import { RecordLink } from "@/components/crm/record-sheet/record-link";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
 import { LocalRelativeTime } from "@/components/local-date-time";
 import { activityLabel } from "@/lib/activity-presentation";
-import { dealStageColor } from "@/lib/deal-stage";
+import { matterStageColor } from "@/lib/matter-stage";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
@@ -46,7 +46,7 @@ import { SalesDashboard } from "./sales-dashboard";
 
 const CELL = "px-3 py-2.5 align-middle";
 const OPEN_COLUMNS: SimpleTableColumn[] = [
-	{ id: "deal", header: "Deal" },
+	{ id: "matter", header: "Matter" },
 	{
 		id: "stage",
 		header: "Stage",
@@ -75,8 +75,8 @@ const ACTIVITY_COLUMNS: SimpleTableColumn[] = [
 		className: "hidden md:table-cell",
 	},
 	{
-		id: "deal",
-		header: "Deal",
+		id: "matter",
+		header: "Matter",
 		width: "w-48",
 		className: "hidden lg:table-cell",
 	},
@@ -134,13 +134,13 @@ export function DashboardSummary() {
 			<div className="grid gap-6 @3xl/page-content:grid-cols-2">
 				<Card className="min-w-0">
 					<CardHeader>
-						<CardTitle>Deals in progress</CardTitle>
+						<CardTitle>Matters in progress</CardTitle>
 						<CardDescription>
-							The largest open deals, and how long each has sat in its stage
+							The largest open matters, and how long each has sat in its stage
 						</CardDescription>
 						<CardAction>
 							<Button asChild variant="contrast" size="sm">
-								<Link href={workspaceUrl("/deals")}>Open deals</Link>
+								<Link href={workspaceUrl("/matters")}>Open matters</Link>
 							</Button>
 						</CardAction>
 					</CardHeader>
@@ -155,38 +155,43 @@ export function DashboardSummary() {
 								surface="page"
 								columns={OPEN_COLUMNS}
 							>
-								{biggestOpen.map((deal) => (
+								{biggestOpen.map((matter) => (
 									<SimpleTableRow
-										key={deal.id}
+										key={matter.id}
 										clickable
-										onClick={() => openRecord({ kind: "deal", id: deal.id })}
+										onClick={() =>
+											openRecord({ kind: "matter", id: matter.id })
+										}
 									>
 										<TableCell className={CELL}>
-											<DealCell
-												name={deal.name}
-												company={deal.company}
-												meta={<LocalRelativeTime date={deal.stageChangedAt} />}
+											<MatterCell
+												name={matter.name}
+												company={matter.company}
+												meta={
+													<LocalRelativeTime date={matter.stageChangedAt} />
+												}
 											/>
 										</TableCell>
 										<TableCell className={`${CELL} hidden lg:table-cell`}>
-											<DealStageIndicator stage={deal.stage} />
+											<MatterStageIndicator stage={matter.stage} />
 										</TableCell>
 										<TableCell className={`${CELL} hidden sm:table-cell`}>
 											<ValueMeter
 												share={
 													largestOpenCents > 0
-														? ((deal.baseAmountCents ?? 0) / largestOpenCents) *
+														? ((matter.baseAmountCents ?? 0) /
+																largestOpenCents) *
 															100
 														: 0
 												}
-												color={dealStageColor(deal.stage)}
+												color={matterStageColor(matter.stage)}
 											/>
 										</TableCell>
 										<TableCell className={`${CELL} text-right tabular-nums`}>
-											{deal.amountCents === null ? (
+											{matter.amountCents === null ? (
 												<EmptyCellValue />
 											) : (
-												formatMoneyCompact(deal.amountCents, deal.currency)
+												formatMoneyCompact(matter.amountCents, matter.currency)
 											)}
 										</TableCell>
 									</SimpleTableRow>
@@ -230,9 +235,9 @@ export function DashboardSummary() {
 											<span className="flex min-w-0 flex-col">
 												<span className="truncate">{task.subject}</span>
 												<span className="flex min-w-0 text-muted-foreground">
-													{task.deal ? (
-														<RecordLink kind="deal" id={task.deal.id}>
-															{task.deal.name}
+													{task.matter ? (
+														<RecordLink kind="matter" id={task.matter.id}>
+															{task.matter.name}
 														</RecordLink>
 													) : task.company ? (
 														<RecordLink kind="company" id={task.company.id}>
@@ -299,9 +304,9 @@ export function DashboardSummary() {
 									)}
 								</TableCell>
 								<TableCell className={`${CELL} hidden lg:table-cell`}>
-									{entry.deal ? (
-										<RecordLink kind="deal" id={entry.deal.id}>
-											{entry.deal.name}
+									{entry.matter ? (
+										<RecordLink kind="matter" id={entry.matter.id}>
+											{entry.matter.name}
 										</RecordLink>
 									) : (
 										<EmptyCellValue />
@@ -326,7 +331,7 @@ export function DashboardSummary() {
 	);
 }
 
-function DealCell({
+function MatterCell({
 	name,
 	company,
 	meta,

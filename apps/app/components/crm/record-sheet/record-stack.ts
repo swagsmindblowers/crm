@@ -10,19 +10,19 @@ import { useCallback, useMemo } from "react";
 import { timelineTabParser } from "@/components/crm/timeline/timeline-search-params";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 
-const RECORD_KINDS = ["company", "contact", "deal"] as const;
+const RECORD_KINDS = ["company", "contact", "matter"] as const;
 
 export type RecordKind = (typeof RECORD_KINDS)[number];
 
 export type RecordRef = { kind: RecordKind; id: string };
 
-const RECORD_FORMS = ["contact", "deal"] as const;
+const RECORD_FORMS = ["contact", "matter"] as const;
 
 export type RecordForm = (typeof RECORD_FORMS)[number];
 
 const FORM_TAB = {
 	contact: "contacts",
-	deal: "deals",
+	matter: "matters",
 } satisfies Record<RecordForm, string>;
 
 const params = {

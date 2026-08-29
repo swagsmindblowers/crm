@@ -2,8 +2,8 @@ import { workspaceUrl } from "@/lib/workspace-url";
 
 export function recordHref(
 	slug: string,
-	list: "/companies" | "/contacts" | "/deals",
-	kind: "company" | "contact" | "deal",
+	list: "/companies" | "/contacts" | "/matters",
+	kind: "company" | "contact" | "matter",
 	id: string,
 ): string {
 	const query = new URLSearchParams({ record: `${kind}:${id}` });

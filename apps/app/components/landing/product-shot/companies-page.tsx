@@ -175,7 +175,7 @@ function CompaniesTable() {
 								{company.contacts}
 							</td>
 							<td className="overflow-clip p-3 text-right text-xs/[133%] tabular-nums">
-								{company.deals}
+								{company.matters}
 							</td>
 							<td className="overflow-clip py-3 pr-4 pl-3 text-right text-muted-foreground text-xs/[133%]">
 								{company.lastActivity}

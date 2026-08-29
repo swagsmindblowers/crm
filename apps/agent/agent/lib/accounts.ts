@@ -51,7 +51,7 @@ export type CompanyPerson = {
 	needsIdentity: boolean;
 };
 
-export type CompanyDeal = {
+export type CompanyMatter = {
 	id: string;
 	name: string;
 	stage: string;
@@ -76,13 +76,13 @@ export type CompanyHistory = {
 		enrichmentStatus: string;
 	};
 	people: CompanyPerson[];
-	deals: CompanyDeal[];
+	matters: CompanyMatter[];
 	threads: AccountThread[];
 	meetings: AccountMeeting[];
 	notes: AccountNote[];
 	stats: {
 		people: number;
-		openDeals: number;
+		openMatters: number;
 		emails: number;
 		meetings: number;
 		theyReplied: boolean;
@@ -125,7 +125,7 @@ export async function readCompanyHistory(
 
 	const belongsToCompany = { OR: [{ companyId }, { contact: { companyId } }] };
 
-	const [people, deals, threads, meetings, notes, lastInbound, counts] =
+	const [people, matters, threads, meetings, notes, lastInbound, counts] =
 		await Promise.all([
 			db.contact.findMany({
 				where: { companyId },
@@ -150,7 +150,7 @@ export async function readCompanyHistory(
 							: false,
 				},
 			}),
-			db.deal.findMany({
+			db.matter.findMany({
 				where: { companyId },
 				orderBy: [{ lastActivityAt: "desc" }, { createdAt: "desc" }],
 				take: 20,
@@ -275,13 +275,13 @@ export async function readCompanyHistory(
 				person.lastName,
 			),
 		})),
-		deals: deals.map(toCompanyDeal),
+		matters: matters.map(toCompanyMatter),
 		threads: threads.map(toAccountThread),
 		meetings: meetings.map((meeting) => toAccountMeeting(meeting, now)),
 		notes,
 		stats: {
 			people: peopleCount,
-			openDeals: deals.filter((deal) => isOpen(deal.stage)).length,
+			openMatters: matters.filter((matter) => isOpen(matter.stage)).length,
 			emails: emailCount,
 			meetings: meetingCount,
 			theyReplied: lastInbound !== null,
@@ -298,8 +298,8 @@ export async function readCompanyHistory(
 	};
 }
 
-export type DealHistory = {
-	deal: {
+export type MatterHistory = {
+	matter: {
 		id: string;
 		name: string;
 		description: string | null;
@@ -337,17 +337,17 @@ export type DealHistory = {
 	note: string;
 };
 
-export async function readDealHistory(
-	dealId: string,
+export async function readMatterHistory(
+	matterId: string,
 	options: {
 		threads?: number;
 		messagesPerThread?: number;
 		includeEmail?: boolean;
 		includeCalendar?: boolean;
 	} = {},
-): Promise<DealHistory | null> {
-	const deal = await db.deal.findUnique({
-		where: { id: dealId },
+): Promise<MatterHistory | null> {
+	const matter = await db.matter.findUnique({
+		where: { id: matterId },
 		select: {
 			id: true,
 			name: true,
@@ -380,26 +380,26 @@ export async function readDealHistory(
 		},
 	});
 
-	if (!deal) return null;
+	if (!matter) return null;
 	const includeEmail = options.includeEmail ?? true;
 	const includeCalendar = options.includeCalendar ?? true;
 
-	const contactIds = deal.contacts.map(({ contact }) => contact.id);
+	const contactIds = matter.contacts.map(({ contact }) => contact.id);
 
 	const relatedThreads =
 		contactIds.length > 0
 			? {
 					OR: [
 						{ contactId: { in: contactIds } },
-						{ companyId: deal.company.id },
+						{ companyId: matter.company.id },
 					],
 				}
-			: { companyId: deal.company.id };
+			: { companyId: matter.company.id };
 
 	const [stageChanges, threads, meetings, notes, lastInbound] =
 		await Promise.all([
 			db.activity.findMany({
-				where: { dealId, type: ActivityType.STAGE_CHANGE },
+				where: { matterId, type: ActivityType.STAGE_CHANGE },
 				orderBy: { createdAt: "asc" },
 				take: 25,
 				select: { meta: true, createdAt: true },
@@ -441,10 +441,10 @@ export async function readDealHistory(
 											{
 												attendees: { some: { contactId: { in: contactIds } } },
 											},
-											{ companyId: deal.company.id },
+											{ companyId: matter.company.id },
 										],
 									}
-								: { companyId: deal.company.id },
+								: { companyId: matter.company.id },
 						orderBy: { startsAt: "desc" },
 						take: 10,
 						select: {
@@ -454,7 +454,7 @@ export async function readDealHistory(
 						},
 					})
 				: Promise.resolve([]),
-			recentNotes({ dealId }),
+			recentNotes({ matterId }),
 			includeEmail
 				? db.emailMessage.findFirst({
 						where: {
@@ -470,24 +470,24 @@ export async function readDealHistory(
 	const now = new Date();
 
 	return {
-		deal: {
-			id: deal.id,
-			name: deal.name,
-			description: deal.description,
-			stage: deal.stage,
-			open: isOpen(deal.stage),
-			daysInStage: daysSince(deal.stageChangedAt, now),
-			stageChangedAt: deal.stageChangedAt.toISOString(),
-			amount: deal.amount === null ? null : Number(deal.amount),
-			currency: deal.currency,
-			expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
-			closedAt: deal.closedAt?.toISOString() ?? null,
-			closedReason: deal.closedReason,
-			owner: deal.owner?.name ?? deal.owner?.email ?? null,
-			createdAt: deal.createdAt.toISOString(),
+		matter: {
+			id: matter.id,
+			name: matter.name,
+			description: matter.description,
+			stage: matter.stage,
+			open: isOpen(matter.stage),
+			daysInStage: daysSince(matter.stageChangedAt, now),
+			stageChangedAt: matter.stageChangedAt.toISOString(),
+			amount: matter.amount === null ? null : Number(matter.amount),
+			currency: matter.currency,
+			expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
+			closedAt: matter.closedAt?.toISOString() ?? null,
+			closedReason: matter.closedReason,
+			owner: matter.owner?.name ?? matter.owner?.email ?? null,
+			createdAt: matter.createdAt.toISOString(),
 		},
-		company: deal.company,
-		people: deal.contacts.map(({ role, contact }) => ({
+		company: matter.company,
+		people: matter.contacts.map(({ role, contact }) => ({
 			id: contact.id,
 			name: fullName(contact),
 			title: contact.title,
@@ -516,29 +516,25 @@ export async function readDealHistory(
 					.filter((meeting) => meeting.startsAt > now)
 					.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0]
 					?.startsAt.toISOString() ?? null,
-			daysSinceLastActivity: deal.lastActivityAt
-				? daysSince(deal.lastActivityAt, now)
+			daysSinceLastActivity: matter.lastActivityAt
+				? daysSince(matter.lastActivityAt, now)
 				: null,
 		},
 		note:
 			includeEmail || includeCalendar
 				? contactIds.length > 0
-					? "Connected account history is filed against people and companies, never against a deal. The history here belongs to the people on this deal and the rest of the account — read the details before treating any of it as being about this deal."
-					: "Nobody is attached to this deal, so the correspondence here is the whole account's. Attaching the people on it would make this answer sharper."
+					? "Connected account history is filed against people and companies, never against a matter. The history here belongs to the people on this matter and the rest of the account — read the details before treating any of it as being about this matter."
+					: "Nobody is attached to this matter, so the correspondence here is the whole account's. Attaching the people on it would make this answer sharper."
 				: "Connected email and calendar history are outside this agent version's approved data sources.",
 	};
 }
 
 function isOpen(stage: string): boolean {
-	return (
-		stage !== "CLOSED_WON" &&
-		stage !== "CLOSED_LOST" &&
-		stage !== "UNQUALIFIED_TO_BUY"
-	);
+	return stage !== "GRANTED" && stage !== "REFUSED" && stage !== "WITHDRAWN";
 }
 
 async function recentNotes(
-	where: { companyId: string } | { dealId: string },
+	where: { companyId: string } | { matterId: string },
 ): Promise<AccountNote[]> {
 	const rows = await db.activity.findMany({
 		where: {
@@ -618,7 +614,7 @@ function toAccountMeeting(
 	};
 }
 
-function toCompanyDeal(deal: {
+function toCompanyMatter(matter: {
 	id: string;
 	name: string;
 	stage: string;
@@ -630,17 +626,17 @@ function toCompanyDeal(deal: {
 		role: string | null;
 		contact: { id: string; firstName: string; lastName: string | null };
 	}[];
-}): CompanyDeal {
+}): CompanyMatter {
 	return {
-		id: deal.id,
-		name: deal.name,
-		stage: deal.stage,
-		open: isOpen(deal.stage),
-		amount: deal.amount === null ? null : Number(deal.amount),
-		currency: deal.currency,
-		expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
-		lastActivityAt: deal.lastActivityAt?.toISOString() ?? null,
-		contacts: deal.contacts.map(({ role, contact }) => ({
+		id: matter.id,
+		name: matter.name,
+		stage: matter.stage,
+		open: isOpen(matter.stage),
+		amount: matter.amount === null ? null : Number(matter.amount),
+		currency: matter.currency,
+		expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
+		lastActivityAt: matter.lastActivityAt?.toISOString() ?? null,
+		contacts: matter.contacts.map(({ role, contact }) => ({
 			id: contact.id,
 			name: fullName(contact),
 			role,
