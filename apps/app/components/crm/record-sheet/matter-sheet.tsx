@@ -341,17 +341,15 @@ function MatterOverview({ matter }: { matter: Matter }) {
 						label="Service"
 						value={matter.serviceType}
 						options={SERVICE_OPTIONS}
-						onSave={(serviceType) => {
-							const fee = serviceDefaultFeeCents(
-								serviceType as (typeof MATTER_SERVICES)[number]["id"],
-							);
-							save({
-								serviceType:
-									serviceType as (typeof MATTER_SERVICES)[number]["id"],
-								...(matter.amountCents === null && fee !== null
-									? { amountCents: fee }
-									: {}),
-							});
+						onSave={(next) => {
+							const nextServiceType =
+								next as (typeof MATTER_SERVICES)[number]["id"];
+							const fee = serviceDefaultFeeCents(nextServiceType);
+							const amountCents =
+								matter.amountCents === null && fee !== null
+									? fee
+									: matter.amountCents;
+							save({ serviceType: nextServiceType, amountCents });
 						}}
 					/>
 					<InlineField

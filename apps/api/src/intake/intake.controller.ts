@@ -18,9 +18,12 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import type { z } from "zod";
 import type { EnvironmentVariables } from "../config/env.validation";
 import { intakeSubmission } from "./intake.contracts";
 import { IntakeService } from "./intake.service";
+
+type IntakeRequestBody = z.input<typeof intakeSubmission>;
 
 @ApiTags("Intake")
 @ApiHeader({
@@ -52,7 +55,7 @@ export class IntakeController {
 	})
 	@ApiOkResponse({ description: "The submission was accepted for filing." })
 	async submit(
-		@Body() body: unknown,
+		@Body() body: IntakeRequestBody,
 		@Headers("x-intake-secret") secret?: string,
 	) {
 		if (!this.secret) {

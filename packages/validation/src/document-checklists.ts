@@ -84,10 +84,7 @@ const RESIDENCE_HISTORY: ChecklistTemplateItem = {
 	required: true,
 };
 
-export const DOCUMENT_CHECKLIST_TEMPLATES: Record<
-	MatterServiceId,
-	ChecklistTemplateItem[]
-> = {
+export const DOCUMENT_CHECKLIST_TEMPLATES = {
 	DIAGNOSTIC_CONSULTATION: [
 		{ key: "passport", label: "Current passport", required: false },
 		{
@@ -389,7 +386,7 @@ export const DOCUMENT_CHECKLIST_TEMPLATES: Record<
 		},
 	],
 	OTHER: [],
-};
+} satisfies Record<MatterServiceId, ChecklistTemplateItem[]>;
 
 export function checklistTemplateFor(
 	service: MatterServiceId,

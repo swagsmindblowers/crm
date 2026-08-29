@@ -27,6 +27,14 @@ type ItemRow = {
 	position: number;
 };
 
+type ChecklistItemUpdate = {
+	label?: string;
+	description?: string | null;
+	status?: DocumentChecklistStatus;
+	receivedAt?: Date | null;
+	required?: boolean;
+};
+
 function serialize(row: ItemRow) {
 	return { ...row, receivedAt: row.receivedAt?.toISOString() ?? null };
 }
@@ -88,13 +96,7 @@ export class DocumentChecklistService {
 	}
 
 	async update(input: ChecklistUpdateInput) {
-		const data: {
-			label?: string;
-			description?: string | null;
-			status?: DocumentChecklistStatus;
-			receivedAt?: Date | null;
-			required?: boolean;
-		} = {};
+		const data: ChecklistItemUpdate = {};
 
 		if (input.label !== undefined) data.label = input.label.trim();
 		if (input.description !== undefined) {

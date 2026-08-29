@@ -139,9 +139,9 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 							ownerId: resolvedOwner,
 							stage: stage as never,
 							serviceType,
-							...(Number.isFinite(parsed)
-								? { amountCents: Math.round(parsed * 100) }
-								: {}),
+							amountCents: Number.isFinite(parsed)
+								? Math.round(parsed * 100)
+								: undefined,
 							currency: currency || workspaceCurrency,
 							expectedCloseDate: closeDate || null,
 						});
