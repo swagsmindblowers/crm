@@ -73,6 +73,7 @@ const VERBS: ToolVerbs = {
 	write_workspace_profile: "Wrote up who we are",
 	research_person: "Researched them on the web",
 	research_company: "Read the company's site",
+	research_ukvi_status: "Checked UKVI guidance",
 	enrich_company: "Looked up the company",
 	schedule_recheck: "Decided when to look again",
 	record_job_change: "Raised a job change",
