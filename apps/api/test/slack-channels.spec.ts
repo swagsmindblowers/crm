@@ -31,17 +31,17 @@ afterEach(() => {
 
 describe("creating a Slack channel", () => {
 	it("returns the channel the agent created", async () => {
-		agentAnswers(200, JSON.stringify({ channel: { id: "C1", name: "deals" } }));
+		agentAnswers(200, JSON.stringify({ channel: { id: "C1", name: "matters" } }));
 
-		expect(await service.create("deals", false)).toEqual({
-			channel: { id: "C1", name: "deals" },
+		expect(await service.create("matters", false)).toEqual({
+			channel: { id: "C1", name: "matters" },
 		});
 	});
 
 	it("reports an agent outage as an outage, not as a bad request", async () => {
 		agentAnswers(502, "<html>Bad Gateway</html>");
 
-		await expect(service.create("deals", false)).rejects.toThrow(
+		await expect(service.create("matters", false)).rejects.toThrow(
 			"The agent failed, so the channel was not created.",
 		);
 	});
@@ -49,7 +49,7 @@ describe("creating a Slack channel", () => {
 	it("reports an unreadable answer as an outage", async () => {
 		agentAnswers(200, "not json at all");
 
-		await expect(service.create("deals", false)).rejects.toThrow(
+		await expect(service.create("matters", false)).rejects.toThrow(
 			"The agent answered with something unreadable, so the channel was not created.",
 		);
 	});
@@ -57,7 +57,7 @@ describe("creating a Slack channel", () => {
 	it("tells the caller what Slack refused", async () => {
 		agentAnswers(422, JSON.stringify({ error: "That name is taken." }));
 
-		await expect(service.create("deals", false)).rejects.toThrow(
+		await expect(service.create("matters", false)).rejects.toThrow(
 			"That name is taken.",
 		);
 	});
@@ -65,7 +65,7 @@ describe("creating a Slack channel", () => {
 	it("says nothing can reach Slack without a bridge secret", async () => {
 		delete process.env.AGENT_BRIDGE_SECRET;
 
-		await expect(service.create("deals", false)).rejects.toThrow(
+		await expect(service.create("matters", false)).rejects.toThrow(
 			"This install has no AGENT_BRIDGE_SECRET, so nothing can reach Slack.",
 		);
 	});

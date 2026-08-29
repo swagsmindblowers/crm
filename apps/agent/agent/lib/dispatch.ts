@@ -242,7 +242,7 @@ export function taskAuth(task: LeasedTask, base: AppAuth = APP_AUTH): AppAuth {
 	const records: Record<string, string> = {};
 	if (task.contactId) records.contactId = task.contactId;
 	if (task.companyId) records.companyId = task.companyId;
-	if (task.dealId) records.dealId = task.dealId;
+	if (task.matterId) records.matterId = task.matterId;
 
 	if (task.kind === "field-backfill") {
 		const parsed = fieldBackfillPayload.safeParse(task.payload);

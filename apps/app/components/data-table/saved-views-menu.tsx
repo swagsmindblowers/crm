@@ -35,8 +35,8 @@ type SavedView = RouterOutputs["savedViews"]["list"][number];
 const RECORD_KIND = {
 	COMPANY: "company",
 	CONTACT: "contact",
-	DEAL: "deal",
-} as const satisfies Record<FieldEntity, "company" | "contact" | "deal">;
+	MATTER: "matter",
+} as const satisfies Record<FieldEntity, "company" | "contact" | "matter">;
 
 export function SavedViewsMenu({
 	entity,

@@ -24,7 +24,7 @@ import { CompaniesService } from "../companies/companies.service";
 import type { EnvironmentVariables } from "../config/env.validation";
 import { ContactsService } from "../contacts/contacts.service";
 import { InjectDatabase } from "../database/database.constants";
-import { DealsService } from "../deals/deals.service";
+import { MattersService } from "../matters/matters.service";
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -45,7 +45,7 @@ export class ArchiveRetentionController {
 		@InjectDatabase() private readonly db: Db,
 		private readonly companies: CompaniesService,
 		private readonly contacts: ContactsService,
-		private readonly deals: DealsService,
+		private readonly matters: MattersService,
 		config: ConfigService<EnvironmentVariables, true>,
 	) {
 		this.secret = config.get("CRON_SECRET", { infer: true });
@@ -54,7 +54,7 @@ export class ArchiveRetentionController {
 	@Get("prune")
 	@AllowAnonymous()
 	@ApiOperation({
-		summary: "Purge companies, contacts and deals past the archive window",
+		summary: "Purge companies, contacts and matters past the archive window",
 	})
 	@ApiOkResponse({ description: "The prune ran; per-record-type counts." })
 	async pruneViaGet(@Headers("authorization") authorization?: string) {
@@ -83,10 +83,10 @@ export class ArchiveRetentionController {
 		const retentionDays = await readArchiveRetentionDays(this.db);
 		const before = new Date(Date.now() - retentionDays * DAY_MS);
 
-		const [companies, contacts, deals] = await Promise.all([
+		const [companies, contacts, matters] = await Promise.all([
 			this.companies.purgeExpired(before),
 			this.contacts.purgeExpired(before),
-			this.deals.purgeExpired(before),
+			this.matters.purgeExpired(before),
 		]);
 
 		this.logger.log({
@@ -96,11 +96,11 @@ export class ArchiveRetentionController {
 			companiesSkipped: companies.skipped,
 			contacts: contacts.succeeded,
 			contactsSkipped: contacts.skipped,
-			deals: deals.succeeded,
-			dealsSkipped: deals.skipped,
+			matters: matters.succeeded,
+			mattersSkipped: matters.skipped,
 		});
 
-		return { retentionDays, companies, contacts, deals };
+		return { retentionDays, companies, contacts, matters };
 	}
 }
 

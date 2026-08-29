@@ -34,7 +34,7 @@ type OpenTask = {
 	kind: string;
 	contactId: string | null;
 	companyId: string | null;
-	dealId: string | null;
+	matterId: string | null;
 	attempts: number;
 	leasedUntil: Date | null;
 	startedAt: Date | null;
@@ -104,7 +104,7 @@ async function runSweep(sweep: StaleTaskSweep): Promise<void> {
 				kind: true,
 				contactId: true,
 				companyId: true,
-				dealId: true,
+				matterId: true,
 				attempts: true,
 				leasedUntil: true,
 				startedAt: true,
@@ -239,7 +239,7 @@ function isUntargetedFieldBackfill(task: OpenTask): boolean {
 		task.kind === "field-backfill" &&
 		!task.contactId &&
 		!task.companyId &&
-		!task.dealId
+		!task.matterId
 	);
 }
 

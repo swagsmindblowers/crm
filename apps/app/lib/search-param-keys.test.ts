@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { companiesSearchParams } from "@/app/(app)/[slug]/companies/companies-search-params";
 import { contactsSearchParams } from "@/app/(app)/[slug]/contacts/contacts-search-params";
-import { dealsSearchParams } from "@/app/(app)/[slug]/deals/deals-search-params";
+import { mattersSearchParams } from "@/app/(app)/[slug]/matters/matters-search-params";
 import { membersSearchParams } from "@/app/(app)/[slug]/settings/members/members-search-params";
 import {
 	assertUnreservedSearchParamKeys,
@@ -33,10 +33,10 @@ describe("assertUnreservedSearchParamKeys", () => {
 	it("rejects a facet that shadows a reserved key", () => {
 		expect(() =>
 			assertUnreservedSearchParamKeys(
-				["owner", SEARCH_PARAM.dialog.closeDeal],
+				["owner", SEARCH_PARAM.dialog.closeMatter],
 				"test",
 			),
-		).toThrow(/closeDeal/);
+		).toThrow(/closeMatter/);
 	});
 
 	it("rejects a facet that shadows a list key", () => {
@@ -49,7 +49,7 @@ describe("list tables", () => {
 		for (const table of [
 			companiesSearchParams,
 			contactsSearchParams,
-			dealsSearchParams,
+			mattersSearchParams,
 			membersSearchParams,
 		]) {
 			expect(Object.keys(table.parsers)).toContain(SEARCH_PARAM.list.fields);

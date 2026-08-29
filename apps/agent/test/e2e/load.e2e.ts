@@ -37,9 +37,9 @@ async function seedAgent() {
 				triggers: [
 					{
 						type: "EVENT",
-						name: "Deal created",
-						summary: "Fires on deal creation",
-						config: { event: "deal.created" },
+						name: "Matter created",
+						summary: "Fires on matter creation",
+						config: { event: "matter.created" },
 					},
 				],
 				dataScope: { mode: "WORKSPACE", summary: "Workspace", resources: [] },
@@ -59,8 +59,8 @@ async function seedAgent() {
 			agentId: agent.id,
 			versionId: version.id,
 			type: "EVENT",
-			name: "Deal created",
-			config: { event: "deal.created" },
+			name: "Matter created",
+			config: { event: "matter.created" },
 			enabled: true,
 			createdById: owner.id,
 		},
@@ -85,14 +85,14 @@ async function sweepLeftovers() {
 	});
 
 	for (const company of stale) {
-		const deals = await db.deal.findMany({
+		const matters = await db.matter.findMany({
 			where: { companyId: company.id },
 			select: { id: true },
 		});
 		await db.agentTask.deleteMany({
-			where: { dealId: { in: deals.map((deal) => deal.id) } },
+			where: { matterId: { in: matters.map((matter) => matter.id) } },
 		});
-		await db.deal.deleteMany({ where: { companyId: company.id } });
+		await db.matter.deleteMany({ where: { companyId: company.id } });
 		await db.company.delete({ where: { id: company.id } });
 		console.log(`  removed leftover ${company.name}`);
 	}
@@ -101,23 +101,23 @@ async function sweepLeftovers() {
 async function cleanUp(
 	agentId: string | null,
 	companyId: string | null,
-	dealIds: string[],
+	matterIds: string[],
 	taskIds: string[],
 ) {
 	await removeEventRuns(taskIds);
 	if (agentId) await removeAgent(agentId);
-	if (dealIds.length > 0) {
-		await db.agentTask.deleteMany({ where: { dealId: { in: dealIds } } });
+	if (matterIds.length > 0) {
+		await db.agentTask.deleteMany({ where: { matterId: { in: matterIds } } });
 	}
 	if (!companyId) return;
-	await db.deal.deleteMany({ where: { companyId } });
+	await db.matter.deleteMany({ where: { companyId } });
 	await db.company.delete({ where: { id: companyId } });
 }
 
 async function main() {
 	await sweepLeftovers();
 
-	const dealIds: string[] = [];
+	const matterIds: string[] = [];
 	const taskIds: string[] = [];
 	let agentId: string | null = null;
 	let companyId: string | null = null;
@@ -136,33 +136,33 @@ async function main() {
 		});
 		companyId = company.id;
 
-		console.log(`Seeding ${COUNT} deal.created events…`);
+		console.log(`Seeding ${COUNT} matter.created events…`);
 		const seedStart = Date.now();
-		const deals = await db.$transaction(
+		const matters = await db.$transaction(
 			Array.from({ length: COUNT }, (_, index) =>
-				db.deal.create({
+				db.matter.create({
 					data: {
-						name: `Load Deal ${index}`,
+						name: `Load Matter ${index}`,
 						companyId: company.id,
 						ownerId: owner.id,
-						stage: "DEMO_BOOKED",
+						stage: "ENQUIRY",
 						stageChangedAt: new Date(),
 					},
 					select: { id: true },
 				}),
 			),
 		);
-		dealIds.push(...deals.map((deal) => deal.id));
+		matterIds.push(...matters.map((matter) => matter.id));
 		await db.agentTask.createMany({
-			data: deals.map((deal) => ({
-				dealId: deal.id,
+			data: matters.map((matter) => ({
+				matterId: matter.id,
 				kind: "agent-event" as const,
-				reason: "deal.created",
+				reason: "matter.created",
 				payload: {
-					type: "deal.created",
-					record: { kind: "deal", id: deal.id },
+					type: "matter.created",
+					record: { kind: "matter", id: matter.id },
 					occurredAt: new Date().toISOString(),
-					data: { companyId: company.id, stage: "DEMO_BOOKED" },
+					data: { companyId: company.id, stage: "ENQUIRY" },
 				},
 				priority: PRIORITY.event,
 				budget: 1,
@@ -170,7 +170,7 @@ async function main() {
 			})),
 		});
 		const seeded = await db.agentTask.findMany({
-			where: { dealId: { in: dealIds } },
+			where: { matterId: { in: matterIds } },
 			select: { id: true },
 		});
 		taskIds.push(...seeded.map((task) => task.id));
@@ -205,7 +205,7 @@ async function main() {
 	} finally {
 		console.log("\nCleaning up…");
 		try {
-			await cleanUp(agentId, companyId, dealIds, taskIds);
+			await cleanUp(agentId, companyId, matterIds, taskIds);
 		} catch (error) {
 			ok = false;
 			console.error(`  cleanup failed — ${reasonOf(error)}`);

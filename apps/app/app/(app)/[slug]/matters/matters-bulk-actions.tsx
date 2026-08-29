@@ -2,7 +2,7 @@
 
 import Archive from "@carbon/icons-react/es/Archive";
 import Undo from "@carbon/icons-react/es/Undo";
-import type { DealStage } from "@crm/db/enums";
+import type { MatterStage } from "@crm/db/enums";
 import { Button } from "@crm/ui/components/button";
 import {
 	Dialog,
@@ -33,15 +33,15 @@ import {
 	BulkOwnerMenu,
 	reportBulk,
 } from "@/components/crm/bulk-actions";
-import { DEAL_STAGE_OPTIONS, LOSING_STAGES } from "@/lib/deal-stage";
+import { MATTER_STAGE_OPTIONS, LOSING_STAGES } from "@/lib/matter-stage";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 
-function deals(count: number): string {
-	return formatCount(count, "deal");
+function matters(count: number): string {
+	return formatCount(count, "matter");
 }
 
-export function DealsBulkActions({
+export function MattersBulkActions({
 	ids,
 	onDone,
 	archived,
@@ -54,17 +54,17 @@ export function DealsBulkActions({
 	const cache = useCrmCache();
 	const users = useQuery(trpc.users.list.queryOptions());
 	const reasonId = useId();
-	const [closing, setClosing] = useState<DealStage | null>(null);
+	const [closing, setClosing] = useState<MatterStage | null>(null);
 	const [reason, setReason] = useState("");
 	const [confirming, setConfirming] = useState(false);
 
 	const onError = (error: { message: string }) => toast.error(error.message);
 
 	const assignOwner = useMutation(
-		trpc.deals.bulkAssignOwner.mutationOptions({
+		trpc.matters.bulkAssignOwner.mutationOptions({
 			onSuccess: async (result) => {
-				await cache.deal();
-				reportBulk(result, (count) => `${deals(count)} reassigned.`);
+				await cache.matter();
+				reportBulk(result, (count) => `${matters(count)} reassigned.`);
 				onDone();
 			},
 			onError,
@@ -72,10 +72,10 @@ export function DealsBulkActions({
 	);
 
 	const setStage = useMutation(
-		trpc.deals.bulkSetStage.mutationOptions({
+		trpc.matters.bulkSetStage.mutationOptions({
 			onSuccess: async (result) => {
-				await cache.deal();
-				reportBulk(result, (count) => `${deals(count)} moved.`);
+				await cache.matter();
+				reportBulk(result, (count) => `${matters(count)} moved.`);
 				setClosing(null);
 				setReason("");
 				onDone();
@@ -85,10 +85,10 @@ export function DealsBulkActions({
 	);
 
 	const archive = useMutation(
-		trpc.deals.bulkArchive.mutationOptions({
+		trpc.matters.bulkArchive.mutationOptions({
 			onSuccess: async (result, variables) => {
-				await cache.removedMany({ kind: "deal", ids: variables.ids });
-				reportBulk(result, (count) => `${deals(count)} archived.`);
+				await cache.removedMany({ kind: "matter", ids: variables.ids });
+				reportBulk(result, (count) => `${matters(count)} archived.`);
 				onDone();
 			},
 			onError,
@@ -96,10 +96,10 @@ export function DealsBulkActions({
 	);
 
 	const restore = useMutation(
-		trpc.deals.bulkRestore.mutationOptions({
+		trpc.matters.bulkRestore.mutationOptions({
 			onSuccess: async (result) => {
-				await cache.deal();
-				reportBulk(result, (count) => `${deals(count)} restored.`);
+				await cache.matter();
+				reportBulk(result, (count) => `${matters(count)} restored.`);
 				onDone();
 			},
 			onError,
@@ -107,10 +107,10 @@ export function DealsBulkActions({
 	);
 
 	const purge = useMutation(
-		trpc.deals.bulkPurge.mutationOptions({
+		trpc.matters.bulkPurge.mutationOptions({
 			onSuccess: async (result, variables) => {
-				await cache.removedMany({ kind: "deal", ids: variables.ids });
-				reportBulk(result, (count) => `${deals(count)} deleted forever.`);
+				await cache.removedMany({ kind: "matter", ids: variables.ids });
+				reportBulk(result, (count) => `${matters(count)} deleted forever.`);
 				setConfirming(false);
 				onDone();
 			},
@@ -144,7 +144,7 @@ export function DealsBulkActions({
 				<BulkDeleteDialog
 					open={confirming}
 					onOpenChange={setConfirming}
-					title={`Delete ${deals(ids.length)} forever?`}
+					title={`Delete ${matters(ids.length)} forever?`}
 					description="Everything filed against them — activity, notes, the amounts in your pipeline — goes too. This cannot be undone."
 					onConfirm={() => purge.mutate({ ids })}
 				/>
@@ -168,7 +168,7 @@ export function DealsBulkActions({
 					<DropdownMenuSubTrigger>Change stage</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent className="max-h-72 overflow-y-auto">
 						<DropdownMenuGroup>
-							{DEAL_STAGE_OPTIONS.map((option) => (
+							{MATTER_STAGE_OPTIONS.map((option) => (
 								<DropdownMenuItem
 									key={option.value}
 									onSelect={() => {
@@ -205,9 +205,9 @@ export function DealsBulkActions({
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>
-							{closing === "CLOSED_LOST"
-								? `Close ${deals(ids.length)} as lost`
-								: `Mark ${deals(ids.length)} as unqualified`}
+							{closing === "REFUSED"
+								? `Close ${matters(ids.length)} as lost`
+								: `Mark ${matters(ids.length)} as unqualified`}
 						</DialogTitle>
 						<DialogDescription>
 							The same reason goes on every one of them, so keep it to what they

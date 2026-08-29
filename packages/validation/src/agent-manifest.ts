@@ -78,7 +78,7 @@ export const agentManifestTrigger = z.discriminatedUnion("type", [
 
 export const agentManifestResource = z.object({
 	id: z.string(),
-	kind: z.enum(["company", "contact", "deal", "integration"]),
+	kind: z.enum(["company", "contact", "matter", "integration"]),
 	label: z.string(),
 });
 

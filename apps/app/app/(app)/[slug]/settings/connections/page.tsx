@@ -109,7 +109,7 @@ async function ConnectionsSettingsPageContent({
 							Nothing is connected yet
 						</h1>
 						<p className="text-muted-foreground text-sm leading-relaxed">
-							Right now every deal, contact and note has to be typed in by hand.
+							Right now every matter, contact and note has to be typed in by hand.
 							Connect a tool and the CRM starts filling itself in from the work
 							your team already does.
 						</p>

@@ -3,12 +3,12 @@ import type { EveToolOutput } from "@crm/validation/eve-tool";
 import type { ReactNode } from "react";
 import { anchorResults } from "@/lib/agent-results";
 import {
-	type DealListResult,
-	dealListResultOf,
-	groupDealListPages,
+	type MatterListResult,
+	matterListResultOf,
+	groupMatterListPages,
 	type TranscriptItem,
 } from "@/lib/agent-transcript";
-import { DealListResultTable } from "./deal-list-result";
+import { MatterListResultTable } from "./matter-list-result";
 
 type ResultEntry = {
 	anchor: (items: readonly TranscriptItem[]) => Map<string, ReactNode[]>;
@@ -61,13 +61,13 @@ const listSkeleton = (
 
 const REGISTRY = new Map<string, ResultEntry>([
 	[
-		"list_deals",
-		defineResult<DealListResult>({
-			tool: "list_deals",
-			validate: dealListResultOf,
-			group: groupDealListPages,
+		"list_matters",
+		defineResult<MatterListResult>({
+			tool: "list_matters",
+			validate: matterListResultOf,
+			group: groupMatterListPages,
 			render: (result, key) => (
-				<DealListResultTable key={key} result={result} />
+				<MatterListResultTable key={key} result={result} />
 			),
 			skeleton: listSkeleton,
 		}),

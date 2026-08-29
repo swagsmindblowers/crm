@@ -1,4 +1,4 @@
-export const FIELD_ENTITIES = ["COMPANY", "CONTACT", "DEAL"] as const;
+export const FIELD_ENTITIES = ["COMPANY", "CONTACT", "MATTER"] as const;
 
 export type FieldEntityName = (typeof FIELD_ENTITIES)[number];
 
@@ -68,7 +68,7 @@ export function usesOptions(type: FieldTypeName): boolean {
 export const RECORD_ID_COLUMNS = {
 	COMPANY: "companyId",
 	CONTACT: "contactId",
-	DEAL: "dealId",
+	MATTER: "matterId",
 } as const satisfies Record<FieldEntityName, string>;
 
 export type RecordIdColumn =

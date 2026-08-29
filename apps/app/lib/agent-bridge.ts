@@ -17,7 +17,7 @@ type BridgeClaims = {
 	name: string;
 	contactId?: string;
 	companyId?: string;
-	dealId?: string;
+	matterId?: string;
 	iat: number;
 	nbf: number;
 	exp: number;
@@ -29,7 +29,7 @@ export async function mintBridgeToken(
 		email: string;
 		name: string;
 	},
-	record: { contactId?: string; companyId?: string; dealId?: string } = {},
+	record: { contactId?: string; companyId?: string; matterId?: string } = {},
 ): Promise<string> {
 	const secret = process.env.AGENT_BRIDGE_SECRET;
 	if (!secret) throw new Error("AGENT_BRIDGE_SECRET is not set.");
@@ -50,7 +50,7 @@ export async function mintBridgeToken(
 
 	if (record.contactId) payload.contactId = record.contactId;
 	if (record.companyId) payload.companyId = record.companyId;
-	if (record.dealId) payload.dealId = record.dealId;
+	if (record.matterId) payload.matterId = record.matterId;
 
 	const signingInput = `${base64url(encode(JSON.stringify(header)))}.${base64url(
 		encode(JSON.stringify(payload)),

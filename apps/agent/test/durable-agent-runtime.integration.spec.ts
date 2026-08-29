@@ -220,8 +220,8 @@ describe("durable custom-agent runtime", () => {
 				agentId,
 				versionId,
 				type: "EVENT",
-				name: "When a deal closes",
-				config: { event: "deal.closed" },
+				name: "When a matter closes",
+				config: { event: "matter.closed" },
 				createdById: userId,
 				enabled: true,
 			},
@@ -232,12 +232,12 @@ describe("durable custom-agent runtime", () => {
 			id: `event-task-${suffix}`,
 			contactId: null,
 			companyId: null,
-			dealId: `event-deal-${suffix}`,
+			matterId: `event-matter-${suffix}`,
 			payload: {
-				type: "deal.closed",
-				record: { kind: "deal", id: `event-deal-${suffix}` },
+				type: "matter.closed",
+				record: { kind: "matter", id: `event-matter-${suffix}` },
 				occurredAt,
-				data: { from: "NEGOTIATION", to: "CLOSED_WON" },
+				data: { from: "NEGOTIATION", to: "GRANTED" },
 			},
 		};
 
@@ -257,11 +257,11 @@ describe("durable custom-agent runtime", () => {
 				status: "QUEUED",
 				input: {
 					event: {
-						type: "deal.closed",
+						type: "matter.closed",
 						occurredAt,
-						data: { from: "NEGOTIATION", to: "CLOSED_WON" },
+						data: { from: "NEGOTIATION", to: "GRANTED" },
 					},
-					record: { kind: "deal", id: `event-deal-${suffix}` },
+					record: { kind: "matter", id: `event-matter-${suffix}` },
 				},
 			},
 		]);
@@ -758,7 +758,7 @@ describe("durable custom-agent runtime", () => {
 	it("accepts a no-action ending on an event run whose condition was not met", async () => {
 		const run = await createRun("RUNNING", new Date(), null, "EVENT");
 		await stageRunResult(run.id, {
-			summary: "The deal was already closed",
+			summary: "The matter was already closed",
 			noActionNeeded: { reason: "The condition was not met." },
 		});
 		const staged = await db.agentRun.findUniqueOrThrow({
@@ -769,7 +769,7 @@ describe("durable custom-agent runtime", () => {
 		});
 
 		const finished = await finishRun(run.id, {
-			summary: staged.summary ?? "The deal was already closed",
+			summary: staged.summary ?? "The matter was already closed",
 			result: runResultOf(staged.result),
 		});
 		expect(finished).toEqual({ id: run.id, status: "SUCCEEDED" });

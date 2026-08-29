@@ -36,7 +36,7 @@ import { type ComponentProps, Suspense, useId, useState } from "react";
 import { toast } from "sonner";
 import { CompanyPicker } from "@/components/crm/company-picker";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
-import { dealStageLabel, OPEN_STAGES } from "@/lib/deal-stage";
+import { matterStageLabel, OPEN_STAGES } from "@/lib/matter-stage";
 import { SEARCH_PARAM } from "@/lib/search-param-keys";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
@@ -47,20 +47,20 @@ function AddButton(props: ComponentProps<typeof Button>) {
 	return (
 		<Button {...props}>
 			<Icon icon={Add} data-icon="inline-start" />
-			New deal
+			New matter
 		</Button>
 	);
 }
 
-export function CreateDealSheet({ companyId }: { companyId?: string }) {
+export function CreateMatterSheet({ companyId }: { companyId?: string }) {
 	return (
 		<Suspense fallback={<AddButton disabled />}>
-			<CreateDealForm companyId={companyId} />
+			<CreateMatterForm companyId={companyId} />
 		</Suspense>
 	);
 }
 
-function CreateDealForm({ companyId }: { companyId?: string }) {
+function CreateMatterForm({ companyId }: { companyId?: string }) {
 	const openRecord = useOpenRecord();
 	const trpc = useTRPC();
 	const cache = useCrmCache();
@@ -72,7 +72,7 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 	const [name, setName] = useState("");
 	const [company, setCompany] = useState(companyId ?? UNSET);
 	const [ownerId, setOwnerId] = useState(UNSET);
-	const [stage, setStage] = useState<string>("DEMO_BOOKED");
+	const [stage, setStage] = useState<string>("ENQUIRY");
 	const [amount, setAmount] = useState("");
 	const [currency, setCurrency] = useState("");
 	const [closeDate, setCloseDate] = useState("");
@@ -90,16 +90,16 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 	const resolvedCurrency = currency || workspaceCurrency || "USD";
 
 	const create = useMutation(
-		trpc.deals.create.mutationOptions({
-			onSuccess: async (deal) => {
-				await cache.deal(deal.id);
-				toast.success(`${deal.name} added.`);
+		trpc.matters.create.mutationOptions({
+			onSuccess: async (matter) => {
+				await cache.matter(matter.id);
+				toast.success(`${matter.name} added.`);
 				await setOpen(null);
 				setName("");
 				setAmount("");
 				setCurrency("");
 				setCloseDate("");
-				openRecord({ kind: "deal", id: deal.id });
+				openRecord({ kind: "matter", id: matter.id });
 			},
 			onError: (error) => toast.error(error.message),
 		}),
@@ -115,14 +115,14 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 			</SheetTrigger>
 			<SheetContent side="right">
 				<SheetHeader>
-					<SheetTitle>New deal</SheetTitle>
+					<SheetTitle>New matter</SheetTitle>
 					<SheetDescription>
-						Every deal belongs to a company and has someone's name against it.
+						Every matter belongs to a company and has someone's name against it.
 					</SheetDescription>
 				</SheetHeader>
 
 				<form
-					id="create-deal"
+					id="create-matter"
 					className="flex-1 overflow-y-auto px-4"
 					onSubmit={(event) => {
 						event.preventDefault();
@@ -154,18 +154,18 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="create-deal-company">Company</FieldLabel>
+							<FieldLabel htmlFor="create-matter-company">Company</FieldLabel>
 							<CompanyPicker
-								id="create-deal-company"
+								id="create-matter-company"
 								value={company}
 								onValueChange={setCompany}
 							/>
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="create-deal-owner">Owner</FieldLabel>
+							<FieldLabel htmlFor="create-matter-owner">Owner</FieldLabel>
 							<Select value={resolvedOwner} onValueChange={setOwnerId}>
-								<SelectTrigger id="create-deal-owner">
+								<SelectTrigger id="create-matter-owner">
 									<SelectValue placeholder="Choose an owner" />
 								</SelectTrigger>
 								<SelectContent>
@@ -179,21 +179,21 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 						</Field>
 
 						<Field>
-							<FieldLabel htmlFor="create-deal-stage">Stage</FieldLabel>
+							<FieldLabel htmlFor="create-matter-stage">Stage</FieldLabel>
 							<Select value={stage} onValueChange={setStage}>
-								<SelectTrigger id="create-deal-stage">
+								<SelectTrigger id="create-matter-stage">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
 									{OPEN_STAGES.map((value) => (
 										<SelectItem key={value} value={value}>
-											{dealStageLabel(value)}
+											{matterStageLabel(value)}
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 							<FieldDescription>
-								A new deal is an open deal — close it from the pipeline once
+								A new matter is an open matter — close it from the pipeline once
 								there is an outcome to record.
 							</FieldDescription>
 						</Field>
@@ -242,11 +242,11 @@ function CreateDealForm({ companyId }: { companyId?: string }) {
 				<SheetFooter>
 					<Button
 						type="submit"
-						form="create-deal"
+						form="create-matter"
 						disabled={create.isPending || !ready}
 					>
 						{create.isPending ? <Spinner /> : null}
-						Add deal
+						Add matter
 					</Button>
 					<SheetClose asChild>
 						<Button variant="outline">Cancel</Button>

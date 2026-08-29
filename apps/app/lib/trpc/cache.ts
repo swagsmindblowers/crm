@@ -9,12 +9,12 @@ type Options = {
 	settle?: Settle;
 };
 
-type RecordKind = "company" | "contact" | "deal";
+type RecordKind = "company" | "contact" | "matter";
 
 const ENTITY_FOR = {
 	company: "COMPANY",
 	contact: "CONTACT",
-	deal: "DEAL",
+	matter: "MATTER",
 } as const satisfies Record<RecordKind, string>;
 
 type RemovedRecord = { kind: RecordKind; id: string };
@@ -24,7 +24,7 @@ type RemovedRecords = { kind: RecordKind; ids: string[] };
 export type CrmCache = {
 	company(id?: string, options?: Options): Promise<void>;
 	contact(id?: string, options?: Options): Promise<void>;
-	deal(id?: string, options?: Options): Promise<void>;
+	matter(id?: string, options?: Options): Promise<void>;
 	fields(entity?: RecordKind, options?: Options): Promise<void>;
 	fieldCoverage(id?: string, options?: Options): Promise<void>;
 	savedViews(entity?: RecordKind, options?: Options): Promise<void>;
@@ -74,7 +74,7 @@ export function useCrmCache(): CrmCache {
 	const listKeys = () => [
 		trpc.companies.list.queryKey(),
 		trpc.contacts.list.queryKey(),
-		trpc.deals.list.queryKey(),
+		trpc.matters.list.queryKey(),
 		trpc.search.quick.queryKey(),
 	];
 
@@ -82,7 +82,7 @@ export function useCrmCache(): CrmCache {
 		const byId = {
 			company: trpc.companies.byId,
 			contact: trpc.contacts.byId,
-			deal: trpc.deals.byId,
+			matter: trpc.matters.byId,
 		}[kind];
 		const goneKeys = ids.map((id) => byId.queryKey({ id }));
 		const gone = new Set(goneKeys.map((key) => JSON.stringify(key)));
@@ -90,7 +90,7 @@ export function useCrmCache(): CrmCache {
 		for (const record of [
 			trpc.companies.byId,
 			trpc.contacts.byId,
-			trpc.deals.byId,
+			trpc.matters.byId,
 		]) {
 			void queryClient.invalidateQueries({
 				queryKey: record.queryKey(),
@@ -115,13 +115,13 @@ export function useCrmCache(): CrmCache {
 	const RECORD_BY_ID = {
 		company: () => trpc.companies.byId.queryKey(),
 		contact: () => trpc.contacts.byId.queryKey(),
-		deal: () => trpc.deals.byId.queryKey(),
+		matter: () => trpc.matters.byId.queryKey(),
 	} as const;
 
 	const RECORD_LIST = {
 		company: () => trpc.companies.list.queryKey(),
 		contact: () => trpc.contacts.list.queryKey(),
-		deal: () => trpc.deals.list.queryKey(),
+		matter: () => trpc.matters.list.queryKey(),
 	} as const;
 
 	return {
@@ -174,7 +174,7 @@ export function useCrmCache(): CrmCache {
 					...listKeys(),
 					...activityKeys(),
 					trpc.contacts.byId.queryKey(),
-					trpc.deals.byId.queryKey(),
+					trpc.matters.byId.queryKey(),
 					trpc.dashboard.summary.queryKey(),
 				],
 				options,
@@ -191,18 +191,18 @@ export function useCrmCache(): CrmCache {
 					...listKeys(),
 					...activityKeys(),
 					trpc.companies.byId.queryKey(),
-					trpc.deals.byId.queryKey(),
-					trpc.deals.contactOptions.queryKey(),
+					trpc.matters.byId.queryKey(),
+					trpc.matters.contactOptions.queryKey(),
 				],
 				options,
 			),
 
-		deal: (id, options) =>
+		matter: (id, options) =>
 			run(
-				[id ? trpc.deals.byId.queryKey({ id }) : trpc.deals.byId.queryKey()],
+				[id ? trpc.matters.byId.queryKey({ id }) : trpc.matters.byId.queryKey()],
 				[
 					...listKeys(),
-					trpc.deals.contactOptions.queryKey(),
+					trpc.matters.contactOptions.queryKey(),
 					trpc.companies.byId.queryKey(),
 					trpc.contacts.byId.queryKey(),
 					...activityKeys(),
@@ -239,7 +239,7 @@ export function useCrmCache(): CrmCache {
 					...listKeys(),
 					trpc.companies.byId.queryKey(),
 					trpc.contacts.byId.queryKey(),
-					trpc.deals.byId.queryKey(),
+					trpc.matters.byId.queryKey(),
 					trpc.dashboard.summary.queryKey(),
 				],
 				options,
@@ -287,7 +287,7 @@ export function useCrmCache(): CrmCache {
 				[trpc.currency.settings.queryKey()],
 				[
 					...listKeys(),
-					trpc.deals.byId.queryKey(),
+					trpc.matters.byId.queryKey(),
 					trpc.companies.byId.queryKey(),
 					trpc.dashboard.summary.queryKey(),
 				],

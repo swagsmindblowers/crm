@@ -1,4 +1,4 @@
-export type CrmEventRecordKind = "company" | "contact" | "deal";
+export type CrmEventRecordKind = "company" | "contact" | "matter";
 
 type CrmEventDefinition = {
 	label: string;
@@ -17,25 +17,25 @@ export const CRM_EVENT_CATALOG = {
 		description: "A contact is added to the CRM",
 		recordKind: "contact",
 	},
-	"deal.created": {
-		label: "Deal created",
-		description: "A deal is added to the CRM",
-		recordKind: "deal",
+	"matter.created": {
+		label: "Matter created",
+		description: "A matter is added to the CRM",
+		recordKind: "matter",
 	},
-	"deal.stage.changed": {
-		label: "Deal stage changed",
-		description: "A deal moves from one pipeline stage to another",
-		recordKind: "deal",
+	"matter.stage.changed": {
+		label: "Matter stage changed",
+		description: "A matter moves from one pipeline stage to another",
+		recordKind: "matter",
 	},
-	"deal.opened": {
-		label: "Deal opened",
-		description: "A closed deal returns to the open pipeline",
-		recordKind: "deal",
+	"matter.opened": {
+		label: "Matter opened",
+		description: "A closed matter returns to the open pipeline",
+		recordKind: "matter",
 	},
-	"deal.closed": {
-		label: "Deal closed",
-		description: "An open deal moves to a closed stage",
-		recordKind: "deal",
+	"matter.closed": {
+		label: "Matter closed",
+		description: "An open matter moves to a closed stage",
+		recordKind: "matter",
 	},
 } as const satisfies Record<string, CrmEventDefinition>;
 

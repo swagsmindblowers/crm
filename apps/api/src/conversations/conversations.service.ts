@@ -62,7 +62,7 @@ export class ConversationsService {
 				userId,
 				contactId: input.contactId ?? undefined,
 				companyId: input.companyId ?? undefined,
-				dealId: input.dealId ?? undefined,
+				matterId: input.matterId ?? undefined,
 			},
 			orderBy: { lastMessageAt: "desc" },
 			take: 20,
@@ -162,7 +162,7 @@ export class ConversationsService {
 			? { contains: search, mode: "insensitive" as const }
 			: undefined;
 
-		const [companies, contacts, deals, slackAccount] = await Promise.all([
+		const [companies, contacts, matters, slackAccount] = await Promise.all([
 			this.db.company.findMany({
 				where: contains ? { name: contains } : undefined,
 				orderBy: { lastActivityAt: { sort: "desc", nulls: "last" } },
@@ -190,7 +190,7 @@ export class ConversationsService {
 					company: { select: { name: true } },
 				},
 			}),
-			this.db.deal.findMany({
+			this.db.matter.findMany({
 				where: contains ? { name: contains } : undefined,
 				orderBy: { lastActivityAt: { sort: "desc", nulls: "last" } },
 				take: 6,
@@ -232,12 +232,12 @@ export class ConversationsService {
 				detail: contact.company?.name ?? contact.email,
 				imageUrl: contact.imageUrl,
 			})),
-			...deals.map((deal) => ({
-				kind: "deal" as const,
-				id: deal.id,
-				label: deal.name,
-				detail: deal.company.name,
-				imageUrl: deal.company.logoUrl,
+			...matters.map((matter) => ({
+				kind: "matter" as const,
+				id: matter.id,
+				label: matter.name,
+				detail: matter.company.name,
+				imageUrl: matter.company.logoUrl,
 			})),
 		];
 	}
@@ -750,7 +750,7 @@ export class ConversationsService {
 			userId: string;
 			contactId: string | null;
 			companyId: string | null;
-			dealId: string | null;
+			matterId: string | null;
 		}) => {
 			if (existing.userId !== userId || existing.kind !== "RECORD") {
 				throw new NotFoundException(
@@ -759,7 +759,7 @@ export class ConversationsService {
 			}
 
 			const existingRecordId =
-				existing.contactId ?? existing.companyId ?? existing.dealId;
+				existing.contactId ?? existing.companyId ?? existing.matterId;
 			if (existingRecordId !== recordId) {
 				throw new BadRequestException(
 					"A conversation cannot be moved to another CRM record.",
@@ -773,7 +773,7 @@ export class ConversationsService {
 					userId,
 					contactId: input.contactId ?? null,
 					companyId: input.companyId ?? null,
-					dealId: input.dealId ?? null,
+					matterId: input.matterId ?? null,
 				},
 				data: {
 					continuationToken: input.continuationToken ?? null,
@@ -800,7 +800,7 @@ export class ConversationsService {
 				userId: true,
 				contactId: true,
 				companyId: true,
-				dealId: true,
+				matterId: true,
 			},
 		});
 		let conversation: { id: string };
@@ -819,7 +819,7 @@ export class ConversationsService {
 						userId,
 						contactId: input.contactId ?? null,
 						companyId: input.companyId ?? null,
-						dealId: input.dealId ?? null,
+						matterId: input.matterId ?? null,
 					},
 					select: { id: true },
 				});
@@ -833,7 +833,7 @@ export class ConversationsService {
 						userId: true,
 						contactId: true,
 						companyId: true,
-						dealId: true,
+						matterId: true,
 					},
 				});
 				if (!winner) throw error;
@@ -929,16 +929,16 @@ export class ConversationsService {
 	private recordId(input: {
 		contactId?: string;
 		companyId?: string;
-		dealId?: string;
+		matterId?: string;
 	}): string {
-		const recordIds = [input.contactId, input.companyId, input.dealId].filter(
+		const recordIds = [input.contactId, input.companyId, input.matterId].filter(
 			(recordId): recordId is string => Boolean(recordId),
 		);
 		const [recordId] = recordIds;
 
 		if (!recordId || recordIds.length !== 1) {
 			throw new BadRequestException(
-				"Choose exactly one contact, company or deal.",
+				"Choose exactly one contact, company or matter.",
 			);
 		}
 

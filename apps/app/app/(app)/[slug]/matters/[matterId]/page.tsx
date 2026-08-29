@@ -6,8 +6,8 @@ export const instant = false;
 export default async function RecordRedirect({
 	params,
 }: {
-	params: Promise<{ slug: string; dealId: string }>;
+	params: Promise<{ slug: string; matterId: string }>;
 }) {
-	const { slug, dealId } = await params;
-	redirect(recordHref(slug, "/deals", "deal", dealId));
+	const { slug, matterId } = await params;
+	redirect(recordHref(slug, "/matters", "matter", matterId));
 }

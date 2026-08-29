@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const fieldBackfillPayload = z.object({
-	entity: z.enum(["COMPANY", "CONTACT", "DEAL"]),
+	entity: z.enum(["COMPANY", "CONTACT", "MATTER"]),
 	keys: z.array(z.string()).min(1),
 });
 

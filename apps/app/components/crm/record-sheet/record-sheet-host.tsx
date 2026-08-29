@@ -6,7 +6,7 @@ import { CloseReasonDialog } from "@/components/crm/stage-change";
 import { DetailSheet } from "@/components/detail-sheet";
 import { CompanySheet } from "./company-sheet";
 import { ContactSheet } from "./contact-sheet";
-import { DealSheet } from "./deal-sheet";
+import { MatterSheet } from "./matter-sheet";
 import { type RecordRef, recordKey, useRecordStack } from "./record-stack";
 
 export function RecordSheetHost() {
@@ -33,8 +33,8 @@ export function RecordSheetHost() {
 					<ContactSheet key={recordKey(shown)} contactId={shown.id} />
 				) : null}
 
-				{shown?.kind === "deal" ? (
-					<DealSheet key={recordKey(shown)} dealId={shown.id} />
+				{shown?.kind === "matter" ? (
+					<MatterSheet key={recordKey(shown)} matterId={shown.id} />
 				) : null}
 			</DetailSheet>
 

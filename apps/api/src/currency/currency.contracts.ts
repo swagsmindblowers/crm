@@ -47,7 +47,7 @@ export const currencyRateOutput = z.object({
 export const currencyInUseOutput = z.object({
 	currency: z.string(),
 	name: z.string().nullable(),
-	deals: z.number(),
+	matters: z.number(),
 	convertible: z.boolean(),
 });
 

@@ -59,7 +59,7 @@ type ToolVerbs = Record<string, string>;
 const VERBS: ToolVerbs = {
 	read_crm_history: "Read our emails and meetings with them",
 	read_company_history: "Read everything we have on the company",
-	read_deal_history: "Read the deal and where it has been",
+	read_matter_history: "Read the matter and where it has been",
 	search_crm: "Looked the record up in the CRM",
 	resolve_linkedin_profile: "Searched for their LinkedIn profile",
 	get_linkedin_profile: "Read a LinkedIn profile",
@@ -76,7 +76,7 @@ const VERBS: ToolVerbs = {
 	enrich_company: "Looked up the company",
 	schedule_recheck: "Decided when to look again",
 	record_job_change: "Raised a job change",
-	list_deals: "Reviewed the deal pipeline",
+	list_matters: "Reviewed the matter pipeline",
 	list_outstanding_work: "Looked for outstanding work",
 	set_chat_title: "Named this chat",
 	list_fields: "Read what this workspace tracks",
@@ -416,7 +416,7 @@ function hostOf(url: string): string {
 	}
 }
 
-export type DealListItem = {
+export type MatterListItem = {
 	id: string;
 	name: string;
 	stage: string;
@@ -442,7 +442,7 @@ export type DealListItem = {
 	expectedCloseDate: string | null;
 };
 
-export type DealListResult = {
+export type MatterListResult = {
 	asOf: string;
 	criteria: {
 		status: string;
@@ -450,7 +450,7 @@ export type DealListResult = {
 		companyId: string | null;
 		ownerId: string | null;
 	};
-	deals: DealListItem[];
+	matters: MatterListItem[];
 	hasMore: boolean;
 };
 
@@ -460,7 +460,7 @@ const finiteNumber = z.number().refine((value) => Number.isFinite(value));
 
 const optionalText = z.string().min(1).nullable().catch(null);
 
-const dealListItem = z.object({
+const matterListItem = z.object({
 	id: requiredText,
 	name: requiredText,
 	stage: requiredText,
@@ -488,7 +488,7 @@ const dealListItem = z.object({
 	expectedCloseDate: requiredText.nullable(),
 });
 
-const dealListResult = z
+const matterListResult = z
 	.object({
 		asOf: requiredText,
 		criteria: z.object({
@@ -497,28 +497,28 @@ const dealListResult = z
 			companyId: requiredText.nullable(),
 			ownerId: requiredText.nullable(),
 		}),
-		deals: z.array(dealListItem),
+		matters: z.array(matterListItem),
 		hasMore: z.boolean().catch(false),
 	})
 	.nullable()
 	.catch(null);
 
-export function dealListResultOf(value: EveToolOutput): DealListResult | null {
-	return dealListResult.parse(value);
+export function matterListResultOf(value: EveToolOutput): MatterListResult | null {
+	return matterListResult.parse(value);
 }
 
-export function groupDealListPages(
-	pages: readonly { itemId: string; value: DealListResult }[],
-): { itemId: string; value: DealListResult }[] {
+export function groupMatterListPages(
+	pages: readonly { itemId: string; value: MatterListResult }[],
+): { itemId: string; value: MatterListResult }[] {
 	const groups = new Map<
 		string,
-		{ itemId: string; value: DealListResult; order: number }
+		{ itemId: string; value: MatterListResult; order: number }
 	>();
 
 	for (const [index, page] of pages.entries()) {
 		const key = JSON.stringify(page.value.criteria);
 		const previous = groups.get(key);
-		const [merged] = mergeDealListResultPages(
+		const [merged] = mergeMatterListResultPages(
 			previous ? [previous.value, page.value] : [page.value],
 		);
 		if (!merged) continue;
@@ -535,21 +535,21 @@ export function groupDealListPages(
 		.map(({ itemId, value }) => ({ itemId, value }));
 }
 
-export function mergeDealListResultPages(
-	results: readonly DealListResult[],
-): DealListResult[] {
-	const groups = new Map<string, DealListResult>();
+export function mergeMatterListResultPages(
+	results: readonly MatterListResult[],
+): MatterListResult[] {
+	const groups = new Map<string, MatterListResult>();
 	for (const result of results) {
 		const key = JSON.stringify(result.criteria);
 		const previous = groups.get(key);
-		const deals = new Map(
-			previous?.deals.map((deal) => [deal.id, deal] as const),
+		const matters = new Map(
+			previous?.matters.map((matter) => [matter.id, matter] as const),
 		);
-		for (const deal of result.deals) deals.set(deal.id, deal);
+		for (const matter of result.matters) matters.set(matter.id, matter);
 
 		groups.set(key, {
 			...result,
-			deals: [...deals.values()],
+			matters: [...matters.values()],
 		});
 	}
 

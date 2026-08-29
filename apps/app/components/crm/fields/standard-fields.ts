@@ -22,7 +22,7 @@ export const STANDARD_FIELDS = {
 		"Company",
 		"Owner",
 	],
-	DEAL: [
+	MATTER: [
 		"Name",
 		"Amount",
 		"Currency",

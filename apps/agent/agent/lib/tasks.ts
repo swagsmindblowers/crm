@@ -6,7 +6,7 @@ export type LeasedTask = {
 	id: string;
 	contactId: string | null;
 	companyId: string | null;
-	dealId: string | null;
+	matterId: string | null;
 	kind: string;
 	reason: string;
 	payload: Prisma.JsonValue | null;
@@ -20,7 +20,7 @@ export type TaskSubject = {
 	id: string;
 	contactId: string | null;
 	companyId: string | null;
-	dealId: string | null;
+	matterId: string | null;
 	kind: string;
 };
 
@@ -61,7 +61,7 @@ export async function claimDue(
 			FOR UPDATE SKIP LOCKED
 		) AS due
 		WHERE t.id = due.id
-		RETURNING t.id, t."contactId", t."companyId", t."dealId", t.kind, t.reason, t.payload,
+		RETURNING t.id, t."contactId", t."companyId", t."matterId", t.kind, t.reason, t.payload,
 			t.budget, t.attempts, t.priority, t."dueAt";
 	`;
 
@@ -89,7 +89,7 @@ export async function retireExhausted(
 			LIMIT ${limit}
 			FOR UPDATE SKIP LOCKED
 		)
-		RETURNING t.id, t."contactId", t."companyId", t."dealId", t.kind;
+		RETURNING t.id, t."contactId", t."companyId", t."matterId", t.kind;
 	`;
 }
 
@@ -115,7 +115,7 @@ export async function completeTask(
 			id: true,
 			contactId: true,
 			companyId: true,
-			dealId: true,
+			matterId: true,
 			kind: true,
 		},
 	});
@@ -128,7 +128,7 @@ export async function taskSubject(taskId: string): Promise<TaskSubject | null> {
 			id: true,
 			contactId: true,
 			companyId: true,
-			dealId: true,
+			matterId: true,
 			kind: true,
 		},
 	});
@@ -147,7 +147,7 @@ export async function noteSession(
 export async function scheduleTask(input: {
 	contactId?: string | null;
 	companyId?: string | null;
-	dealId?: string | null;
+	matterId?: string | null;
 	kind: string;
 	reason: string;
 	payload?: Prisma.InputJsonValue | null;
@@ -161,7 +161,7 @@ export async function scheduleTask(input: {
 			finishedAt: null,
 			contactId: input.contactId ?? undefined,
 			companyId: input.companyId ?? undefined,
-			dealId: input.dealId ?? undefined,
+			matterId: input.matterId ?? undefined,
 		},
 		select: { id: true },
 	});
@@ -178,7 +178,7 @@ export async function scheduleTask(input: {
 		data: {
 			contactId: input.contactId ?? null,
 			companyId: input.companyId ?? null,
-			dealId: input.dealId ?? null,
+			matterId: input.matterId ?? null,
 			kind: input.kind,
 			reason: input.reason,
 			payload: input.payload ?? undefined,

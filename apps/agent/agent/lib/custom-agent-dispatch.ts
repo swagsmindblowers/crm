@@ -299,7 +299,7 @@ export async function queueDueAgentRuns(now = new Date()): Promise<number> {
 export async function queueEventAgentRuns(
 	task: Pick<
 		LeasedTask,
-		"id" | "contactId" | "companyId" | "dealId" | "payload"
+		"id" | "contactId" | "companyId" | "matterId" | "payload"
 	>,
 ): Promise<number> {
 	const parsed = crmEventTask.safeParse(task.payload);
@@ -316,7 +316,7 @@ export async function queueEventAgentRuns(
 			? task.contactId
 			: recordKind === "company"
 				? task.companyId
-				: task.dealId;
+				: task.matterId;
 	if (taskRecordId !== recordId) {
 		throw new Error("The queued agent event is invalid.");
 	}

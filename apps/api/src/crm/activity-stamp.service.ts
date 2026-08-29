@@ -5,13 +5,13 @@ import { InjectDatabase } from "../database/database.constants";
 export type ActivityTarget = {
 	companyId?: string | null;
 	contactId?: string | null;
-	dealId?: string | null;
+	matterId?: string | null;
 };
 
 export type StampTargets = {
 	companyIds: string[];
 	contactIds: string[];
-	dealIds: string[];
+	matterIds: string[];
 };
 
 function present(ids: (string | null)[]): string[] {
@@ -42,9 +42,9 @@ export class ActivityStampService {
 						data: { lastActivityAt: at },
 					})
 				: null,
-			target.dealId
-				? this.db.deal.updateMany({
-						where: { id: target.dealId, ...stale },
+			target.matterId
+				? this.db.matter.updateMany({
+						where: { id: target.matterId, ...stale },
 						data: { lastActivityAt: at },
 					})
 				: null,
@@ -74,13 +74,13 @@ export class ActivityStampService {
 			});
 		}
 
-		if (target.dealId) {
+		if (target.matterId) {
 			const { _max } = await this.db.activity.aggregate({
-				where: { dealId: target.dealId },
+				where: { matterId: target.matterId },
 				_max: { createdAt: true },
 			});
-			await this.db.deal.update({
-				where: { id: target.dealId },
+			await this.db.matter.update({
+				where: { id: target.matterId },
 				data: { lastActivityAt: _max.createdAt },
 			});
 		}
@@ -90,16 +90,16 @@ export class ActivityStampService {
 		where: Prisma.ActivityWhereInput,
 		client: Prisma.TransactionClient = this.db,
 	): Promise<StampTargets> {
-		const [companies, contacts, deals] = await Promise.all([
+		const [companies, contacts, matters] = await Promise.all([
 			client.activity.groupBy({ by: ["companyId"], where }),
 			client.activity.groupBy({ by: ["contactId"], where }),
-			client.activity.groupBy({ by: ["dealId"], where }),
+			client.activity.groupBy({ by: ["matterId"], where }),
 		]);
 
 		return {
 			companyIds: present(companies.map((row) => row.companyId)),
 			contactIds: present(contacts.map((row) => row.contactId)),
-			dealIds: present(deals.map((row) => row.dealId)),
+			matterIds: present(matters.map((row) => row.matterId)),
 		};
 	}
 
@@ -107,7 +107,7 @@ export class ActivityStampService {
 		const statements = [
 			this.restamp("company", "companyId", targets.companyIds),
 			this.restamp("contact", "contactId", targets.contactIds),
-			this.restamp("deal", "dealId", targets.dealIds),
+			this.restamp("matter", "matterId", targets.matterIds),
 		].filter((statement) => statement !== null);
 
 		if (statements.length === 0) return;
@@ -174,17 +174,17 @@ export class ActivityStampService {
 				WHERE "lastActivityAt" IS NOT NULL
 				AND id NOT IN (SELECT "contactId" FROM "activity" WHERE "contactId" IS NOT NULL)`,
 			this.db.$executeRaw`
-				UPDATE "deal" d
+				UPDATE "matter" d
 				SET "lastActivityAt" = a.max
 				FROM (
-					SELECT "dealId" AS id, MAX("createdAt") AS max
-					FROM "activity" WHERE "dealId" IS NOT NULL GROUP BY "dealId"
+					SELECT "matterId" AS id, MAX("createdAt") AS max
+					FROM "activity" WHERE "matterId" IS NOT NULL GROUP BY "matterId"
 				) a
 				WHERE d.id = a.id AND d."lastActivityAt" IS DISTINCT FROM a.max`,
 			this.db.$executeRaw`
-				UPDATE "deal" SET "lastActivityAt" = NULL
+				UPDATE "matter" SET "lastActivityAt" = NULL
 				WHERE "lastActivityAt" IS NOT NULL
-				AND id NOT IN (SELECT "dealId" FROM "activity" WHERE "dealId" IS NOT NULL)`,
+				AND id NOT IN (SELECT "matterId" FROM "activity" WHERE "matterId" IS NOT NULL)`,
 		]);
 	}
 }

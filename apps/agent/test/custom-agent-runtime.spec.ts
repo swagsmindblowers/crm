@@ -158,13 +158,13 @@ describe("session purpose boundaries", () => {
 		expect(() => assertResearchPurpose(context("team-agent"))).toThrow();
 	});
 
-	it("leaves the read-only deal list open to the assistant chat that is told to use it", async () => {
+	it("leaves the read-only matter list open to the assistant chat that is told to use it", async () => {
 		const source = await Bun.file(
-			new URL("../agent/tools/list_deals.ts", import.meta.url),
+			new URL("../agent/tools/list_matters.ts", import.meta.url),
 		).text();
 
 		expect(source).not.toContain("assertResearchPurpose");
-		expect(builderTaskMarkdown(null)).toContain("list_deals");
+		expect(builderTaskMarkdown(null)).toContain("list_matters");
 	});
 
 	it("binds specialist tools to their explicit session purpose", () => {
@@ -218,7 +218,7 @@ describe("deployed Slack actions", () => {
 			{
 				type: "slack.message.post",
 				provider: "slack",
-				summary: "Direct message the deal owner",
+				summary: "Direct message the matter owner",
 				destination: {
 					kind: "user",
 					resolution: "chosen",
@@ -266,7 +266,7 @@ describe("deployed Slack actions", () => {
 			await sendSlackMessage(
 				"xoxb-test",
 				{ kind: "user", id: "U123", label: "@grim" },
-				"A deal just closed.",
+				"A matter just closed.",
 				"7d3e8854-79f9-48dd-a933-8cfb5994f99e",
 				{
 					fetcher,
@@ -285,7 +285,7 @@ describe("deployed Slack actions", () => {
 				url: "https://slack.com/api/chat.postMessage",
 				body: {
 					channel: "D123",
-					text: "A deal just closed.",
+					text: "A matter just closed.",
 					client_msg_id: "7d3e8854-79f9-48dd-a933-8cfb5994f99e",
 				},
 			},
@@ -305,7 +305,7 @@ describe("deployed Slack actions", () => {
 			sendSlackMessage(
 				"xoxb-test",
 				{ kind: "channel", id: "C123", label: "#alerts" },
-				"A deal just closed.",
+				"A matter just closed.",
 				"7d3e8854-79f9-48dd-a933-8cfb5994f99e",
 				{ fetcher },
 			),
@@ -336,7 +336,7 @@ describe("builder command routing", () => {
 		expect(chat).toContain("call ask_question");
 		expect(chat).toContain("one focused follow-up");
 		expect(chat).toContain(
-			"Do not restate or enumerate individual deal rows in prose, bullets, or tables",
+			"Do not restate or enumerate individual matter rows in prose, bullets, or tables",
 		);
 		expect(builderTaskMarkdown(null)).toContain("private CRM assistant chat");
 	});
@@ -503,7 +503,7 @@ describe("agent builder draft input", () => {
 			name: "Renewal prep",
 			description: "Prepare a renewal call brief.",
 			instructions:
-				"Run manually. Read the selected deal and summarize renewal risks for review.",
+				"Run manually. Read the selected matter and summarize renewal risks for review.",
 			triggers: [
 				{
 					type: "MANUAL",
@@ -512,7 +512,7 @@ describe("agent builder draft input", () => {
 				},
 			],
 			recordScope: "SELECTED",
-			resources: [{ kind: "deal", id: "deal-1", label: "Acme renewal" }],
+			resources: [{ kind: "matter", id: "matter-1", label: "Acme renewal" }],
 			integrations: ["gmail", "calendar"],
 			actions: [
 				{
@@ -525,7 +525,7 @@ describe("agent builder draft input", () => {
 
 		expect(draftInputFromTool(parsed)).toMatchObject({
 			resources: [
-				{ kind: "deal", id: "deal-1", label: "Acme renewal" },
+				{ kind: "matter", id: "matter-1", label: "Acme renewal" },
 				{ kind: "integration", id: "google:gmail", label: "Gmail" },
 				{
 					kind: "integration",
@@ -546,7 +546,7 @@ describe("agent builder draft input", () => {
 			name: "Renewal prep",
 			description: "Prepare a renewal call brief.",
 			instructions:
-				"Run manually. Read the selected deal and summarize renewal risks for review.",
+				"Run manually. Read the selected matter and summarize renewal risks for review.",
 			triggers: [
 				{
 					type: "MANUAL",
@@ -572,7 +572,7 @@ describe("agent builder draft input", () => {
 				name: "Renewal prep",
 				description: "Prepare a renewal call brief.",
 				instructions:
-					"Run manually. Read workspace deals and summarize renewal risks for review.",
+					"Run manually. Read workspace matters and summarize renewal risks for review.",
 				triggers: [
 					{
 						type: "MANUAL",
@@ -649,15 +649,15 @@ describe("agent builder draft input", () => {
 
 	it("keeps an approved Slack person destination", () => {
 		const parsed = builderDraftToolInput.parse({
-			name: "Deal alert",
-			description: "Tell Grim when a deal is created.",
+			name: "Matter alert",
+			description: "Tell Grim when a matter is created.",
 			instructions:
-				"When a deal is created, send one direct Slack message to the approved workspace member and stop.",
+				"When a matter is created, send one direct Slack message to the approved workspace member and stop.",
 			triggers: [
 				{
 					type: "MANUAL",
-					name: "New deal alert",
-					summary: "Run for every new deal",
+					name: "New matter alert",
+					summary: "Run for every new matter",
 				},
 			],
 			recordScope: "WORKSPACE",
@@ -758,7 +758,7 @@ describe("agent builder draft input", () => {
 			name: "Renewal prep",
 			description: "Prepare a renewal call brief.",
 			instructions:
-				"Run manually. Read workspace deals and summarize renewal risks for review.",
+				"Run manually. Read workspace matters and summarize renewal risks for review.",
 			recordScope: "WORKSPACE" as const,
 			resources: [],
 			integrations: [],
@@ -801,28 +801,28 @@ describe("agent builder draft input", () => {
 
 	it("accepts multiple supported CRM events without a polling schedule", () => {
 		const parsed = builderDraftToolInput.parse({
-			name: "Closed deal alert",
-			description: "Alert the team whenever a deal closes.",
+			name: "Closed matter alert",
+			description: "Alert the team whenever a matter closes.",
 			instructions:
-				"When the triggering deal closes, read that deal, prepare one concise alert, and stop after the approved action.",
+				"When the triggering matter closes, read that matter, prepare one concise alert, and stop after the approved action.",
 			triggers: [
 				{
 					type: "EVENT",
-					name: "When a deal is created",
-					summary: "Runs when a deal is created",
-					event: "deal.created",
+					name: "When a matter is created",
+					summary: "Runs when a matter is created",
+					event: "matter.created",
 				},
 				{
 					type: "EVENT",
-					name: "When a deal opens",
-					summary: "Runs when a closed deal returns to the open pipeline",
-					event: "deal.opened",
+					name: "When a matter opens",
+					summary: "Runs when a closed matter returns to the open pipeline",
+					event: "matter.opened",
 				},
 				{
 					type: "EVENT",
-					name: "When a deal closes",
-					summary: "Runs when a deal first enters a closed stage",
-					event: "deal.closed",
+					name: "When a matter closes",
+					summary: "Runs when a matter first enters a closed stage",
+					event: "matter.closed",
 				},
 			],
 			recordScope: "WORKSPACE",
@@ -832,7 +832,7 @@ describe("agent builder draft input", () => {
 				{
 					type: "run.summary",
 					provider: "crm",
-					summary: "Record the closed-deal alert",
+					summary: "Record the closed-matter alert",
 				},
 			],
 		});
@@ -840,7 +840,7 @@ describe("agent builder draft input", () => {
 		expect(draftInputFromTool(parsed).triggers).toHaveLength(3);
 		expect(
 			draftInputFromTool(parsed).triggers.map((trigger) => trigger.event),
-		).toEqual(["deal.created", "deal.opened", "deal.closed"]);
+		).toEqual(["matter.created", "matter.opened", "matter.closed"]);
 	});
 });
 
@@ -850,7 +850,7 @@ describe("agent builder draft access", () => {
 			name: "Handoff",
 			description: "Hand new customers to onboarding.",
 			instructions:
-				"Run on demand. Read closed-won deals and record the handoff for onboarding.",
+				"Run on demand. Read closed-won matters and record the handoff for onboarding.",
 			triggers: [
 				{
 					type: "MANUAL",

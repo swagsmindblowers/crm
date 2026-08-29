@@ -92,7 +92,7 @@ function task(overrides: Partial<LeasedTask> = {}): LeasedTask {
 		id: "task_1",
 		contactId: "contact_1",
 		companyId: null,
-		dealId: null,
+		matterId: null,
 		kind: "identify",
 		reason: "A new contact",
 		payload: null,

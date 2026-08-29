@@ -127,7 +127,7 @@ describe("builder persistence", () => {
 				{
 					...request,
 					requestId: "newer-question-from-child",
-					prompt: "Which deal stage should this watch?",
+					prompt: "Which matter stage should this watch?",
 				},
 			],
 		};
@@ -242,16 +242,16 @@ describe("builder persistence", () => {
 			await setBuilderConversationTitle(
 				conversation.id,
 				userId,
-				"  “Flag stale pipeline deals”  ",
+				"  “Flag stale pipeline matters”  ",
 			),
-		).toEqual({ saved: true, title: "Flag stale pipeline deals" });
+		).toEqual({ saved: true, title: "Flag stale pipeline matters" });
 		expect(
 			await setBuilderConversationTitle(
 				conversation.id,
 				userId,
 				"Replace the title",
 			),
-		).toEqual({ saved: false, title: "Flag stale pipeline deals" });
+		).toEqual({ saved: false, title: "Flag stale pipeline matters" });
 	});
 
 	it("serializes concurrent file writes and draft saves", async () => {
@@ -378,28 +378,28 @@ describe("builder persistence", () => {
 		conversationIds.push(conversation.id);
 
 		const saved = await saveBuilderDraft(conversation.id, userId, {
-			name: "Deal lifecycle alerts",
-			description: "Report deal creation, opening, and closing.",
+			name: "Matter lifecycle alerts",
+			description: "Report matter creation, opening, and closing.",
 			instructions:
-				"When a configured deal lifecycle event occurs, read the triggering deal, return one concise summary of the change, and stop without changing CRM records.",
+				"When a configured matter lifecycle event occurs, read the triggering matter, return one concise summary of the change, and stop without changing CRM records.",
 			triggers: [
 				{
 					type: "EVENT",
-					name: "Deal created",
-					summary: "Run when a deal is created.",
-					event: "deal.created",
+					name: "Matter created",
+					summary: "Run when a matter is created.",
+					event: "matter.created",
 				},
 				{
 					type: "EVENT",
-					name: "Deal opened",
-					summary: "Run when a closed deal returns to the open pipeline.",
-					event: "deal.opened",
+					name: "Matter opened",
+					summary: "Run when a closed matter returns to the open pipeline.",
+					event: "matter.opened",
 				},
 				{
 					type: "EVENT",
-					name: "Deal closed",
-					summary: "Run when an open deal enters a closed stage.",
-					event: "deal.closed",
+					name: "Matter closed",
+					summary: "Run when an open matter enters a closed stage.",
+					event: "matter.closed",
 				},
 			],
 			recordScope: "WORKSPACE",
@@ -408,7 +408,7 @@ describe("builder persistence", () => {
 				{
 					type: "run.summary",
 					provider: "crm",
-					summary: "Write a deal lifecycle summary.",
+					summary: "Write a matter lifecycle summary.",
 				},
 			],
 			access: ["Read workspace CRM records"],
@@ -422,9 +422,9 @@ describe("builder persistence", () => {
 				select: { type: true, config: true },
 			}),
 		).toEqual([
-			{ type: "EVENT", config: { event: "deal.created" } },
-			{ type: "EVENT", config: { event: "deal.opened" } },
-			{ type: "EVENT", config: { event: "deal.closed" } },
+			{ type: "EVENT", config: { event: "matter.created" } },
+			{ type: "EVENT", config: { event: "matter.opened" } },
+			{ type: "EVENT", config: { event: "matter.closed" } },
 		]);
 
 		const version = await db.agentVersion.findUniqueOrThrow({
@@ -433,9 +433,9 @@ describe("builder persistence", () => {
 		});
 		expect(version.manifest).toMatchObject({
 			triggers: [
-				{ config: { event: "deal.created" } },
-				{ config: { event: "deal.opened" } },
-				{ config: { event: "deal.closed" } },
+				{ config: { event: "matter.created" } },
+				{ config: { event: "matter.opened" } },
+				{ config: { event: "matter.closed" } },
 			],
 		});
 	});
@@ -572,7 +572,7 @@ describe("builder persistence", () => {
 		const revised = {
 			...original,
 			name: "Workspace health pulse",
-			description: "Report company and open-deal counts.",
+			description: "Report company and open-matter counts.",
 		};
 		await writeBuilderArtifact(
 			conversation.id,

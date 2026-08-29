@@ -246,7 +246,7 @@ describe("purging a contact", () => {
 });
 
 describe("purging a company", () => {
-	it("takes its deals and leaves its people without a company", async () => {
+	it("takes its matters and leaves its people without a company", async () => {
 		const company = await companies.create({
 			name: "Doomed",
 			domain: doomedDomain,
@@ -257,8 +257,8 @@ describe("purging a company", () => {
 			email: `left@${doomedDomain}`,
 			companyId: company.id,
 		});
-		const deal = await db.deal.create({
-			data: { name: "Doomed deal", companyId: company.id, ownerId: userId },
+		const matter = await db.matter.create({
+			data: { name: "Doomed matter", companyId: company.id, ownerId: userId },
 			select: { id: true },
 		});
 
@@ -269,7 +269,7 @@ describe("purging a company", () => {
 			name: "Doomed",
 		});
 
-		expect(await db.deal.findUnique({ where: { id: deal.id } })).toBeNull();
+		expect(await db.matter.findUnique({ where: { id: matter.id } })).toBeNull();
 		expect(await db.agentTask.count({ where: { companyId: company.id } })).toBe(
 			0,
 		);
@@ -295,8 +295,8 @@ describe("the activity stamps a purge leaves behind", () => {
 			email: `stamped@${stampDomain}`,
 			companyId: company.id,
 		});
-		const deal = await db.deal.create({
-			data: { name: "Stamped deal", companyId: company.id, ownerId: userId },
+		const matter = await db.matter.create({
+			data: { name: "Stamped matter", companyId: company.id, ownerId: userId },
 			select: { id: true },
 		});
 
@@ -307,13 +307,13 @@ describe("the activity stamps a purge leaves behind", () => {
 				subject: "The only thing on this account",
 				companyId: company.id,
 				contactId: contact.id,
-				dealId: deal.id,
+				matterId: matter.id,
 				createdById: userId,
 				createdAt: at,
 			},
 		});
 		await stamp.touch(
-			{ companyId: company.id, contactId: contact.id, dealId: deal.id },
+			{ companyId: company.id, contactId: contact.id, matterId: matter.id },
 			at,
 		);
 
@@ -326,14 +326,14 @@ describe("the activity stamps a purge leaves behind", () => {
 			}),
 		).toEqual({ lastActivityAt: null });
 		expect(
-			await db.deal.findUnique({
-				where: { id: deal.id },
+			await db.matter.findUnique({
+				where: { id: matter.id },
 				select: { lastActivityAt: true },
 			}),
 		).toEqual({ lastActivityAt: null });
 	});
 
-	it("follow a deleted company through the deals it takes with it", async () => {
+	it("follow a deleted company through the matters it takes with it", async () => {
 		const company = await companies.create({
 			name: "Orphaner",
 			domain: orphanDomain,
@@ -343,8 +343,8 @@ describe("the activity stamps a purge leaves behind", () => {
 			email: `orphaned@${orphanDomain}`,
 			companyId: company.id,
 		});
-		const deal = await db.deal.create({
-			data: { name: "Orphaned deal", companyId: company.id, ownerId: userId },
+		const matter = await db.matter.create({
+			data: { name: "Orphaned matter", companyId: company.id, ownerId: userId },
 			select: { id: true },
 		});
 
@@ -352,14 +352,14 @@ describe("the activity stamps a purge leaves behind", () => {
 		await db.activity.create({
 			data: {
 				type: "MEETING",
-				subject: "Only ever attached to the deal",
+				subject: "Only ever attached to the matter",
 				contactId: contact.id,
-				dealId: deal.id,
+				matterId: matter.id,
 				createdById: userId,
 				createdAt: at,
 			},
 		});
-		await stamp.touch({ contactId: contact.id, dealId: deal.id }, at);
+		await stamp.touch({ contactId: contact.id, matterId: matter.id }, at);
 
 		await companies.purge(company.id);
 

@@ -4,11 +4,11 @@ import type { EveToolInput, EveToolOutput } from "@crm/validation/eve-tool";
 import type { EveMessage } from "eve/react";
 import {
 	conversationTimeline,
-	dealListResultOf,
+	matterListResultOf,
 	describe as describeStep,
 	eventStreamSettled,
 	latestTurnFailure,
-	mergeDealListResultPages,
+	mergeMatterListResultPages,
 	NEW_THREAD,
 	outcomeTone,
 	pendingQuestion,
@@ -130,16 +130,16 @@ describe("toTranscript", () => {
 	it("keeps a tool name and structured output for dedicated result UI", () => {
 		const grouped = toTranscript([
 			message([
-				tool("list_deals", {
-					output: { deals: [] },
+				tool("list_matters", {
+					output: { matters: [] },
 				}),
 			]),
 		]);
 
 		expect(grouped[0]?.items[0]).toMatchObject({
 			kind: "did",
-			tool: "list_deals",
-			output: { deals: [] },
+			tool: "list_matters",
+			output: { matters: [] },
 		});
 	});
 
@@ -168,11 +168,11 @@ describe("toTranscript", () => {
 	});
 });
 
-describe("deal list presentation", () => {
-	const deal = {
-		id: "deal-1",
+describe("matter list presentation", () => {
+	const matter = {
+		id: "matter-1",
 		name: "Notion — expansion",
-		stage: "CONTRACT_SENT",
+		stage: "SUBMITTED",
 		amount: 14_000,
 		currency: "USD",
 		company: {
@@ -203,16 +203,16 @@ describe("deal list presentation", () => {
 			companyId: null,
 			ownerId: null,
 		},
-		deals: [deal],
+		matters: [matter],
 		hasMore: false,
 	};
 
-	it("parses structured list_deals output", () => {
-		expect(dealListResultOf(output)).toMatchObject({
+	it("parses structured list_matters output", () => {
+		expect(matterListResultOf(output)).toMatchObject({
 			criteria: { status: "open", inactiveForDays: 14 },
-			deals: [
+			matters: [
 				{
-					id: "deal-1",
+					id: "matter-1",
 					daysSinceLastActivity: 201,
 					company: {
 						iconUrl: "https://cdn.example.test/notion.png",
@@ -221,46 +221,46 @@ describe("deal list presentation", () => {
 				},
 			],
 		});
-		expect(dealListResultOf({ deals: [] })).toBeNull();
+		expect(matterListResultOf({ matters: [] })).toBeNull();
 	});
 
-	it("merges paginated deal results without duplicate rows", () => {
-		const first = dealListResultOf({ ...output, hasMore: true });
-		const second = dealListResultOf({
+	it("merges paginated matter results without duplicate rows", () => {
+		const first = matterListResultOf({ ...output, hasMore: true });
+		const second = matterListResultOf({
 			...output,
 			asOf: "2026-08-06T01:15:00.000Z",
-			deals: [deal, { ...deal, id: "deal-2", name: "Linear — Comp AI" }],
+			matters: [matter, { ...matter, id: "matter-2", name: "Linear — Comp AI" }],
 		});
-		if (!first || !second) throw new Error("Expected valid deal list results");
+		if (!first || !second) throw new Error("Expected valid matter list results");
 
-		expect(mergeDealListResultPages([first, second])).toMatchObject([
+		expect(mergeMatterListResultPages([first, second])).toMatchObject([
 			{
 				asOf: "2026-08-06T01:15:00.000Z",
 				hasMore: false,
-				deals: [{ id: "deal-1" }, { id: "deal-2" }],
+				matters: [{ id: "matter-1" }, { id: "matter-2" }],
 			},
 		]);
 	});
 
-	it("keeps different deal query scopes in separate result groups", () => {
-		const open = dealListResultOf(output);
-		const company = dealListResultOf({
+	it("keeps different matter query scopes in separate result groups", () => {
+		const open = matterListResultOf(output);
+		const company = matterListResultOf({
 			...output,
 			criteria: { ...output.criteria, companyId: "company-1" },
 		});
-		if (!open || !company) throw new Error("Expected valid deal list results");
+		if (!open || !company) throw new Error("Expected valid matter list results");
 
-		expect(mergeDealListResultPages([open, company])).toMatchObject([
-			{ criteria: { companyId: null }, deals: [{ id: "deal-1" }] },
-			{ criteria: { companyId: "company-1" }, deals: [{ id: "deal-1" }] },
+		expect(mergeMatterListResultPages([open, company])).toMatchObject([
+			{ criteria: { companyId: null }, matters: [{ id: "matter-1" }] },
+			{ criteria: { companyId: "company-1" }, matters: [{ id: "matter-1" }] },
 		]);
 	});
 
 	it("removes model-authored Markdown tables while keeping its analysis", () => {
 		const markdown = [
-			"I found two stale deals.",
+			"I found two stale matters.",
 			"",
-			"| Deal | Idle |",
+			"| Matter | Idle |",
 			"|---|---|",
 			"| Notion | 201 days |",
 			"| Linear | 134 days |",
@@ -270,7 +270,7 @@ describe("deal list presentation", () => {
 		].join("\n");
 
 		expect(splitMarkdownTable(markdown)).toEqual({
-			before: "I found two stale deals.",
+			before: "I found two stale matters.",
 			after: "### What stands out\nFollow up on Notion first.",
 			found: true,
 		});

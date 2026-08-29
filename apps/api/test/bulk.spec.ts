@@ -8,7 +8,7 @@ import type { FaviconService } from "../src/companies/favicon.service";
 import { ContactsService } from "../src/contacts/contacts.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
-import { DealsService } from "../src/deals/deals.service";
+import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
@@ -48,7 +48,7 @@ const companies = new CompaniesService(
 	conversion,
 	fields,
 );
-const deals = new DealsService(db, agent, stamp, conversion, fields);
+const matters = new MattersService(db, agent, stamp, conversion, fields);
 
 let companyId: string;
 
@@ -59,7 +59,7 @@ async function clean() {
 	});
 	const companyIds = owned.map((row) => row.id);
 
-	await db.deal.deleteMany({ where: { companyId: { in: companyIds } } });
+	await db.matter.deleteMany({ where: { companyId: { in: companyIds } } });
 	await db.activity.deleteMany({ where: { companyId: { in: companyIds } } });
 	await db.agentTask.deleteMany({ where: { companyId: { in: companyIds } } });
 	await db.contact.deleteMany({ where: ours });
@@ -208,13 +208,13 @@ describe("purging a selection", () => {
 		).toBeNull();
 	});
 
-	it("takes a company's deals with it", async () => {
+	it("takes a company's matters with it", async () => {
 		const doomed = await companies.create({
 			name: `Doomed Co ${suffix}`,
 			domain: `doomed-${domain}`,
 		});
-		const deal = await deals.create({
-			name: `Doomed deal ${suffix}`,
+		const matter = await matters.create({
+			name: `Doomed matter ${suffix}`,
 			companyId: doomed.id,
 			ownerId,
 		});
@@ -227,13 +227,13 @@ describe("purging a selection", () => {
 			message: null,
 		});
 
-		expect(await db.deal.findUnique({ where: { id: deal.id } })).toBeNull();
+		expect(await db.matter.findUnique({ where: { id: matter.id } })).toBeNull();
 	});
 });
 
-describe("moving a selection of deals to a stage", () => {
+describe("moving a selection of matters to a stage", () => {
 	it("will not close them as lost without a reason", async () => {
-		const deal = await deals.create({
+		const matter = await matters.create({
 			name: `Unreasoned ${suffix}`,
 			companyId,
 			ownerId,
@@ -241,8 +241,8 @@ describe("moving a selection of deals to a stage", () => {
 
 		let refused: Error | null = null;
 		try {
-			await deals.bulkSetStage(
-				{ ids: [deal.id], stage: "CLOSED_LOST" },
+			await matters.bulkSetStage(
+				{ ids: [matter.id], stage: "REFUSED" },
 				ownerId,
 			);
 		} catch (cause) {
@@ -251,30 +251,30 @@ describe("moving a selection of deals to a stage", () => {
 		expect(refused?.message).toMatch(/teaches nobody anything/);
 
 		expect(
-			await db.deal.findUnique({
-				where: { id: deal.id },
+			await db.matter.findUnique({
+				where: { id: matter.id },
 				select: { stage: true },
 			}),
-		).toEqual({ stage: "DEMO_BOOKED" });
+		).toEqual({ stage: "ENQUIRY" });
 	});
 
-	it("writes the one reason onto every deal's timeline", async () => {
-		const first = await deals.create({
+	it("writes the one reason onto every matter's timeline", async () => {
+		const first = await matters.create({
 			name: `Lost one ${suffix}`,
 			companyId,
 			ownerId,
 		});
-		const second = await deals.create({
+		const second = await matters.create({
 			name: `Lost two ${suffix}`,
 			companyId,
 			ownerId,
 		});
 
 		expect(
-			await deals.bulkSetStage(
+			await matters.bulkSetStage(
 				{
 					ids: [first.id, second.id],
-					stage: "CLOSED_LOST",
+					stage: "REFUSED",
 					closedReason: "Budget pulled",
 				},
 				ownerId,
@@ -287,21 +287,21 @@ describe("moving a selection of deals to a stage", () => {
 			message: null,
 		});
 
-		const closed = await db.deal.findMany({
+		const closed = await db.matter.findMany({
 			where: { id: { in: [first.id, second.id] } },
 			select: { stage: true, closedReason: true, closedAt: true },
 		});
 
-		expect(closed.every((deal) => deal.stage === "CLOSED_LOST")).toBe(true);
-		expect(closed.every((deal) => deal.closedReason === "Budget pulled")).toBe(
+		expect(closed.every((matter) => matter.stage === "REFUSED")).toBe(true);
+		expect(closed.every((matter) => matter.closedReason === "Budget pulled")).toBe(
 			true,
 		);
-		expect(closed.every((deal) => deal.closedAt !== null)).toBe(true);
+		expect(closed.every((matter) => matter.closedAt !== null)).toBe(true);
 
 		expect(
 			await db.activity.count({
 				where: {
-					dealId: { in: [first.id, second.id] },
+					matterId: { in: [first.id, second.id] },
 					type: "STAGE_CHANGE",
 					body: "Budget pulled",
 				},

@@ -152,12 +152,12 @@ export function QuickAddContact({
 	);
 }
 
-export function AttachDealContact({
-	dealId,
+export function AttachMatterContact({
+	matterId,
 	companyName,
 	onDone,
 }: {
-	dealId: string;
+	matterId: string;
 	companyName: string;
 	onDone: () => void;
 }) {
@@ -170,20 +170,20 @@ export function AttachDealContact({
 	const personId = useId();
 	const roleId = useId();
 
-	const options = useQuery(trpc.deals.contactOptions.queryOptions({ dealId }));
+	const options = useQuery(trpc.matters.contactOptions.queryOptions({ matterId }));
 	const candidates = options.data ?? [];
 
 	const attach = useMutation(
-		trpc.deals.attachContact.mutationOptions({
+		trpc.matters.attachContact.mutationOptions({
 			onSuccess: async (attached) => {
 				const person = candidates.find(
 					(candidate) => candidate.id === attached.contactId,
 				);
-				await cache.deal(dealId);
+				await cache.matter(matterId);
 				toast.success(
 					person
-						? `${contactName(person)} is on the deal.`
-						: "Added to the deal.",
+						? `${contactName(person)} is on the matter.`
+						: "Added to the matter.",
 				);
 				onDone();
 			},
@@ -201,12 +201,12 @@ export function AttachDealContact({
 
 	return (
 		<QuickAddForm
-			submitLabel="Add to deal"
+			submitLabel="Add to matter"
 			pending={attach.isPending}
 			ready={contactId !== ""}
 			onCancel={onDone}
 			onSubmit={() =>
-				attach.mutate({ dealId, contactId, role: role.trim() || null })
+				attach.mutate({ matterId, contactId, role: role.trim() || null })
 			}
 		>
 			<Field>
@@ -239,7 +239,7 @@ export function AttachDealContact({
 	);
 }
 
-export function QuickAddDeal({
+export function QuickAddMatter({
 	companyId,
 	companyName,
 	ownerId,
@@ -265,10 +265,10 @@ export function QuickAddDeal({
 	const owner = ownerId ?? me.data?.id ?? null;
 
 	const create = useMutation(
-		trpc.deals.create.mutationOptions({
-			onSuccess: async (deal) => {
-				await cache.deal(deal.id);
-				toast.success(`${deal.name} created.`);
+		trpc.matters.create.mutationOptions({
+			onSuccess: async (matter) => {
+				await cache.matter(matter.id);
+				toast.success(`${matter.name} created.`);
 				onDone();
 			},
 			onError: (error) => toast.error(error.message),
@@ -277,7 +277,7 @@ export function QuickAddDeal({
 
 	const submit = () => {
 		if (!owner) {
-			toast.error("Could not work out who should own this deal.");
+			toast.error("Could not work out who should own this matter.");
 			return;
 		}
 
@@ -302,7 +302,7 @@ export function QuickAddDeal({
 
 	return (
 		<QuickAddForm
-			submitLabel="Create deal"
+			submitLabel="Create matter"
 			pending={create.isPending}
 			ready={name.trim() !== ""}
 			onCancel={onDone}

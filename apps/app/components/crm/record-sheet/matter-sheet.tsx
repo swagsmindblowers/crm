@@ -36,7 +36,7 @@ import {
 	savingValue,
 } from "@/components/crm/inline-field";
 import { OwnerCell } from "@/components/crm/owner-cell";
-import { DealStageMenu } from "@/components/crm/stage-change";
+import { MatterStageMenu } from "@/components/crm/stage-change";
 import { StageStepper } from "@/components/crm/stage-stepper";
 import { Timeline } from "@/components/crm/timeline/timeline";
 import {
@@ -58,19 +58,19 @@ import { savingField } from "@/lib/pending-field";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
-import { AttachDealContact } from "./quick-add";
+import { AttachMatterContact } from "./quick-add";
 import { RecordActions } from "./record-actions";
 import { AddRow, RecordSheetFrame } from "./record-parts";
 import { useOpenRecord, useRecordSheetView } from "./record-stack";
 
-type Deal = RouterOutputs["deals"]["byId"];
+type Matter = RouterOutputs["matters"]["byId"];
 
 const CURRENCY_OPTIONS = CURRENCIES.map((entry) => ({
 	value: entry.code,
 	label: `${entry.code} · ${entry.name}`,
 }));
 
-function dealCurrency(currency: string) {
+function matterCurrency(currency: string) {
 	return normalizeCurrency(currency) || currency;
 }
 
@@ -85,21 +85,21 @@ function currencyOptions(currency: string) {
 	];
 }
 
-function ReportedValue({ deal }: { deal: Deal }) {
-	const currency = dealCurrency(deal.currency);
+function ReportedValue({ matter }: { matter: Matter }) {
+	const currency = matterCurrency(matter.currency);
 
-	if (currency === deal.reportingCurrency) return null;
-	if (deal.amountCents === null) return null;
+	if (currency === matter.reportingCurrency) return null;
+	if (matter.amountCents === null) return null;
 
 	return (
-		<DetailSheetProperty label={`In ${deal.reportingCurrency}`}>
-			{deal.baseAmountCents === null ? (
+		<DetailSheetProperty label={`In ${matter.reportingCurrency}`}>
+			{matter.baseAmountCents === null ? (
 				<span className="text-muted-foreground">
 					No {currency} rate — left out of totals
 				</span>
 			) : (
 				<span className="tabular-nums text-muted-foreground">
-					≈ {formatMoney(deal.baseAmountCents, deal.reportingCurrency)}
+					≈ {formatMoney(matter.baseAmountCents, matter.reportingCurrency)}
 				</span>
 			)}
 		</DetailSheetProperty>
@@ -120,7 +120,7 @@ const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
 	year: "numeric",
 };
 
-export function DealSheet({ dealId }: { dealId: string }) {
+export function MatterSheet({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const openRecord = useOpenRecord();
 	const {
@@ -130,23 +130,23 @@ export function DealSheet({ dealId }: { dealId: string }) {
 		setForm: setAdding,
 	} = useRecordSheetView("overview");
 
-	const query = useQuery(trpc.deals.byId.queryOptions({ id: dealId }));
-	const deal = query.data;
+	const query = useQuery(trpc.matters.byId.queryOptions({ id: matterId }));
+	const matter = query.data;
 
-	const tabs: DetailSheetTab[] = deal
+	const tabs: DetailSheetTab[] = matter
 		? [
 				{
 					value: "overview",
 					label: "Overview",
-					content: <DealOverview deal={deal} />,
+					content: <MatterOverview matter={matter} />,
 				},
 				{
 					value: "contacts",
 					label: "Contacts",
-					count: deal.contacts.length,
+					count: matter.contacts.length,
 					content: (
-						<DealContacts
-							deal={deal}
+						<MatterContacts
+							matter={matter}
 							adding={adding === "contact"}
 							onAdd={() => setAdding("contact")}
 							onDone={() => setAdding(null)}
@@ -156,12 +156,12 @@ export function DealSheet({ dealId }: { dealId: string }) {
 				{
 					value: "activity",
 					label: "Activity",
-					content: <Timeline anchor={{ dealId: deal.id }} />,
+					content: <Timeline anchor={{ matterId: matter.id }} />,
 				},
 				{
 					value: "agent",
 					label: "Agent",
-					content: <AgentPanel record={{ kind: "deal", id: deal.id }} />,
+					content: <AgentPanel record={{ kind: "matter", id: matter.id }} />,
 					keepMounted: true,
 				},
 			]
@@ -171,70 +171,70 @@ export function DealSheet({ dealId }: { dealId: string }) {
 		<RecordSheetFrame
 			loading={query.isPending}
 			error={query.error?.message ?? null}
-			title={deal?.name ?? "Deal"}
+			title={matter?.name ?? "Matter"}
 			description={
-				deal ? (
+				matter ? (
 					<button
 						type="button"
-						onClick={() => openRecord({ kind: "company", id: deal.company.id })}
+						onClick={() => openRecord({ kind: "company", id: matter.company.id })}
 						className="text-foreground underline-offset-2 hover:underline"
 					>
-						{deal.company.name}
+						{matter.company.name}
 					</button>
 				) : undefined
 			}
 			media={
-				deal ? (
+				matter ? (
 					<EntityLogo
-						src={deal.company.iconUrl}
-						darkSrc={deal.company.iconDarkUrl}
-						tone={deal.company.iconTone as EntityLogoTone | null | undefined}
-						name={deal.company.name}
+						src={matter.company.iconUrl}
+						darkSrc={matter.company.iconDarkUrl}
+						tone={matter.company.iconTone as EntityLogoTone | null | undefined}
+						name={matter.company.name}
 						size="lg"
 					/>
 				) : null
 			}
 			actions={
-				deal ? (
+				matter ? (
 					<>
-						<DealStageMenu
-							dealId={deal.id}
-							stage={deal.stage}
+						<MatterStageMenu
+							matterId={matter.id}
+							stage={matter.stage}
 							variant="control"
 						/>
 						<RecordActions
-							record={{ kind: "deal", id: deal.id }}
-							name={deal.name}
-							consequence={`Its stage history, notes and agent conversations go too. ${deal.company.name} and the ${deal.contacts.length === 1 ? "person" : "people"} on it stay in the CRM.`}
-							archivedAt={deal.archivedAt}
+							record={{ kind: "matter", id: matter.id }}
+							name={matter.name}
+							consequence={`Its stage history, notes and agent conversations go too. ${matter.company.name} and the ${matter.contacts.length === 1 ? "person" : "people"} on it stay in the CRM.`}
+							archivedAt={matter.archivedAt}
 						/>
 					</>
 				) : null
 			}
 			stats={
-				deal ? (
+				matter ? (
 					<DetailSheetStats>
 						<DetailSheetStat label="Amount">
-							{deal.amountCents === null ? (
+							{matter.amountCents === null ? (
 								<EmptyCellValue />
 							) : (
 								<span className="tabular-nums">
-									{formatMoney(deal.amountCents, dealCurrency(deal.currency))}
+									{formatMoney(matter.amountCents, matterCurrency(matter.currency))}
 								</span>
 							)}
 						</DetailSheetStat>
 						<DetailSheetStat label="Expected close">
-							{deal.expectedCloseDate ? (
-								<LocalDay date={deal.expectedCloseDate} />
+							{matter.expectedCloseDate ? (
+								<LocalDay date={matter.expectedCloseDate} />
 							) : (
 								<EmptyCellValue />
 							)}
 						</DetailSheetStat>
 						<DetailSheetStat label="In stage">
-							<LocalRelativeTime date={deal.stageChangedAt} />
+							<LocalRelativeTime date={matter.stageChangedAt} />
 						</DetailSheetStat>
 						<DetailSheetStat label="Owner">
-							<OwnerCell owner={deal.owner} />
+							<OwnerCell owner={matter.owner} />
 						</DetailSheetStat>
 					</DetailSheetStats>
 				) : null
@@ -246,64 +246,64 @@ export function DealSheet({ dealId }: { dealId: string }) {
 	);
 }
 
-function DealOverview({ deal }: { deal: Deal }) {
+function MatterOverview({ matter }: { matter: Matter }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
 
 	const users = useQuery(trpc.users.list.queryOptions());
 
 	const update = useMutation(
-		trpc.deals.update.mutationOptions({
-			onSuccess: () => cache.deal(deal.id, { settle: "record" }),
+		trpc.matters.update.mutationOptions({
+			onSuccess: () => cache.matter(matter.id, { settle: "record" }),
 			onError: (error) => toast.error(error.message),
 		}),
 	);
 
 	const saveFields = (fields: Record<string, FieldValueJson>) =>
-		update.mutate({ id: deal.id, data: { fields } });
+		update.mutate({ id: matter.id, data: { fields } });
 
 	const isSavingField = savingValue(update);
 
 	const save = (data: Parameters<typeof update.mutate>[0]["data"]) =>
-		update.mutate({ id: deal.id, data });
+		update.mutate({ id: matter.id, data });
 
-	const currency = dealCurrency(deal.currency);
+	const currency = matterCurrency(matter.currency);
 
 	const isSaving = savingField(update);
 
 	return (
 		<DetailSheetBody>
 			<DetailSheetSection title="Stage">
-				<StageStepper dealId={deal.id} stage={deal.stage} />
+				<StageStepper matterId={matter.id} stage={matter.stage} />
 
-				{deal.closedReason ? (
+				{matter.closedReason ? (
 					<DetailSheetProperties>
 						<DetailSheetProperty label="Closed">
-							{deal.closedAt ? (
-								<LocalDateTime date={deal.closedAt} options={DATE_OPTIONS} />
+							{matter.closedAt ? (
+								<LocalDateTime date={matter.closedAt} options={DATE_OPTIONS} />
 							) : (
 								<EmptyCellValue />
 							)}
 						</DetailSheetProperty>
 						<DetailSheetProperty label="Reason" wide>
-							{deal.closedReason}
+							{matter.closedReason}
 						</DetailSheetProperty>
 					</DetailSheetProperties>
 				) : null}
 			</DetailSheetSection>
 
-			<DetailSheetSection title="Details" action={<FieldsCog kind="deal" />}>
+			<DetailSheetSection title="Details" action={<FieldsCog kind="matter" />}>
 				<DetailSheetProperties>
 					<InlineField
 						label="Name"
-						value={deal.name}
+						value={matter.name}
 						saving={isSaving("name")}
 						onSave={(name) => name && save({ name })}
 					/>
 					<InlineField
 						label="Amount"
 						value={
-							deal.amountCents === null ? null : String(deal.amountCents / 100)
+							matter.amountCents === null ? null : String(matter.amountCents / 100)
 						}
 						placeholder="24000"
 						saving={isSaving("amountCents")}
@@ -326,22 +326,22 @@ function DealOverview({ deal }: { deal: Deal }) {
 						options={currencyOptions(currency)}
 						onSave={(currency) => save({ currency })}
 					/>
-					<ReportedValue deal={deal} />
+					<ReportedValue matter={matter} />
 					<InlineDateField
 						label="Close date"
-						value={deal.expectedCloseDate}
+						value={matter.expectedCloseDate}
 						saving={isSaving("expectedCloseDate")}
 						onSave={(next) => save({ expectedCloseDate: next || null })}
 					/>
 					<InlineCompanyField
-						value={deal.company.id}
-						company={deal.company}
+						value={matter.company.id}
+						company={matter.company}
 						saving={isSaving("companyId")}
 						onSave={(companyId) => save({ companyId })}
 					/>
 					<InlineSelectField
 						label="Owner"
-						value={deal.owner.id}
+						value={matter.owner.id}
 						options={(users.data ?? []).map((user) => ({
 							value: user.id,
 							label: user.name,
@@ -349,7 +349,7 @@ function DealOverview({ deal }: { deal: Deal }) {
 						onSave={(ownerId) => save({ ownerId })}
 					/>
 					<RecordFields
-						fields={deal.fields}
+						fields={matter.fields}
 						saving={isSavingField}
 						onSave={saveFields}
 					/>
@@ -359,52 +359,52 @@ function DealOverview({ deal }: { deal: Deal }) {
 			<DetailSheetSection title="Description">
 				<InlineTextArea
 					label="Description"
-					value={deal.description}
-					placeholder={`What ${deal.company.name} is buying, why now, and what stands in the way.`}
+					value={matter.description}
+					placeholder={`What ${matter.company.name} is buying, why now, and what stands in the way.`}
 					saving={isSaving("description")}
 					onSave={(description) => save({ description })}
 				/>
 			</DetailSheetSection>
 
-			<WhereItStands deal={deal} />
+			<WhereItStands matter={matter} />
 		</DetailSheetBody>
 	);
 }
 
-function WhereItStands({ deal }: { deal: Deal }) {
+function WhereItStands({ matter }: { matter: Matter }) {
 	const openRecord = useOpenRecord();
 
 	return (
 		<DetailSheetSection title="Where it stands">
 			<DetailSheetProperties>
 				<DetailSheetProperty label="Opened">
-					<LocalDateTime date={deal.createdAt} options={DATE_OPTIONS} />
+					<LocalDateTime date={matter.createdAt} options={DATE_OPTIONS} />
 				</DetailSheetProperty>
 
 				<DetailSheetProperty label="In stage since">
-					<LocalDateTime date={deal.stageChangedAt} options={DATE_OPTIONS} />
+					<LocalDateTime date={matter.stageChangedAt} options={DATE_OPTIONS} />
 				</DetailSheetProperty>
 
-				{deal.closedAt ? (
+				{matter.closedAt ? (
 					<DetailSheetProperty label="Closed">
-						<LocalDateTime date={deal.closedAt} options={DATE_OPTIONS} />
+						<LocalDateTime date={matter.closedAt} options={DATE_OPTIONS} />
 					</DetailSheetProperty>
 				) : null}
 
-				{deal.closedReason ? (
+				{matter.closedReason ? (
 					<DetailSheetProperty label="Reason" wide>
-						{deal.closedReason}
+						{matter.closedReason}
 					</DetailSheetProperty>
 				) : null}
 
 				<DetailSheetProperty label="On it" wide>
-					{deal.contacts.length === 0 ? (
+					{matter.contacts.length === 0 ? (
 						<span className="text-muted-foreground">
-							Nobody from {deal.company.name} is attached yet.
+							Nobody from {matter.company.name} is attached yet.
 						</span>
 					) : (
 						<span className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-							{deal.contacts.map((contact) => {
+							{matter.contacts.map((contact) => {
 								const aside = contact.role ?? contact.title;
 								return (
 									<button
@@ -430,13 +430,13 @@ function WhereItStands({ deal }: { deal: Deal }) {
 	);
 }
 
-function DealContacts({
-	deal,
+function MatterContacts({
+	matter,
 	adding,
 	onAdd,
 	onDone,
 }: {
-	deal: Deal;
+	matter: Matter;
 	adding: boolean;
 	onAdd: () => void;
 	onDone: () => void;
@@ -446,36 +446,36 @@ function DealContacts({
 	const openRecord = useOpenRecord();
 
 	const detach = useMutation(
-		trpc.deals.detachContact.mutationOptions({
-			onSuccess: () => cache.deal(deal.id, { settle: "record" }),
+		trpc.matters.detachContact.mutationOptions({
+			onSuccess: () => cache.matter(matter.id, { settle: "record" }),
 			onError: (error) => toast.error(error.message),
 		}),
 	);
 
 	const setRole = useMutation(
-		trpc.deals.setContactRole.mutationOptions({
-			onSuccess: () => cache.deal(deal.id, { settle: "record" }),
+		trpc.matters.setContactRole.mutationOptions({
+			onSuccess: () => cache.matter(matter.id, { settle: "record" }),
 			onError: (error) => toast.error(error.message),
 		}),
 	);
 
 	const form = adding ? (
-		<AttachDealContact
-			dealId={deal.id}
-			companyName={deal.company.name}
+		<AttachMatterContact
+			matterId={matter.id}
+			companyName={matter.company.name}
 			onDone={onDone}
 		/>
 	) : null;
 
-	if (deal.contacts.length === 0) {
+	if (matter.contacts.length === 0) {
 		return (
 			<>
 				{form}
 				{adding ? null : (
 					<DetailSheetEmpty
 						icon={UserMultiple}
-						title="No contacts on this deal"
-						description={`Nobody from ${deal.company.name} is attached yet. Bring the people you are selling to onto the deal and it says who to chase.`}
+						title="No contacts on this matter"
+						description={`Nobody from ${matter.company.name} is attached yet. Bring the people you are selling to onto the matter and it says who to chase.`}
 						action={
 							<Button variant="outline" size="sm" onClick={onAdd}>
 								<Icon icon={Add} data-icon="inline-start" />
@@ -492,7 +492,7 @@ function DealContacts({
 		<>
 			{form}
 			<SimpleTable variant="panel" columns={CONTACT_COLUMNS}>
-				{deal.contacts.map((contact) => (
+				{matter.contacts.map((contact) => (
 					<SimpleTableRow
 						key={contact.id}
 						clickable
@@ -511,7 +511,7 @@ function DealContacts({
 						</TableCell>
 						<TableCell className="truncate px-1 py-2.5">
 							<InlineTextCell
-								label={`Role on this deal for ${contactName(contact)}`}
+								label={`Role on this matter for ${contactName(contact)}`}
 								value={contact.role}
 								placeholder="Champion"
 								saving={
@@ -520,7 +520,7 @@ function DealContacts({
 								}
 								onSave={(role) =>
 									setRole.mutate({
-										dealId: deal.id,
+										matterId: matter.id,
 										contactId: contact.id,
 										role: role || null,
 									})
@@ -543,18 +543,18 @@ function DealContacts({
 										onClick={(event) => {
 											event.stopPropagation();
 											detach.mutate({
-												dealId: deal.id,
+												matterId: matter.id,
 												contactId: contact.id,
 											});
 										}}
 									>
 										<Icon icon={Close} />
 										<span className="sr-only">
-											Take {contactName(contact)} off this deal
+											Take {contactName(contact)} off this matter
 										</span>
 									</Button>
 								</TooltipTrigger>
-								<TooltipContent>Take off this deal</TooltipContent>
+								<TooltipContent>Take off this matter</TooltipContent>
 							</Tooltip>
 						</TableCell>
 					</SimpleTableRow>

@@ -10,7 +10,7 @@ import { FaviconService } from "../companies/favicon.service";
 import { InjectDatabase } from "../database/database.constants";
 import { ImageMirrorService } from "./image-mirror.service";
 
-export type BackfillScope = "companies" | "contacts" | "deals";
+export type BackfillScope = "companies" | "contacts" | "matters";
 
 export type BackfillResult = {
 	queued: number;
@@ -117,12 +117,12 @@ export class BackfillService implements OnModuleInit {
 	async run(scope: BackfillScope): Promise<BackfillResult> {
 		if (scope === "contacts") return this.runContacts();
 
-		return this.runCompanies(scope === "deals");
+		return this.runCompanies(scope === "matters");
 	}
 
-	private async runCompanies(dealsOnly: boolean): Promise<BackfillResult> {
-		const onDeals: Prisma.CompanyWhereInput = dealsOnly
-			? { deals: { some: {} } }
+	private async runCompanies(mattersOnly: boolean): Promise<BackfillResult> {
+		const onMatters: Prisma.CompanyWhereInput = mattersOnly
+			? { matters: { some: {} } }
 			: {};
 
 		const needsBrand = this.companiesNeedingBrand();
@@ -130,16 +130,16 @@ export class BackfillService implements OnModuleInit {
 
 		const [total, rows, artworkRows] = await Promise.all([
 			this.db.company.count({
-				where: { ...onDeals, OR: [needsBrand, needsArtwork] },
+				where: { ...onMatters, OR: [needsBrand, needsArtwork] },
 			}),
 			this.db.company.findMany({
-				where: { ...needsBrand, ...onDeals },
+				where: { ...needsBrand, ...onMatters },
 				orderBy: { createdAt: "asc" },
 				take: MAX_PER_RUN,
 				select: { id: true },
 			}),
 			this.db.company.findMany({
-				where: { ...needsArtwork, ...onDeals },
+				where: { ...needsArtwork, ...onMatters },
 				orderBy: { createdAt: "asc" },
 				take: MAX_PER_RUN,
 				select: { id: true },
@@ -172,7 +172,7 @@ export class BackfillService implements OnModuleInit {
 			alreadyQueued: brand.alreadyQueued + profile.alreadyQueued,
 		};
 
-		const iconsResolving = dealsOnly ? 0 : await this.sweepFavicons();
+		const iconsResolving = mattersOnly ? 0 : await this.sweepFavicons();
 
 		return {
 			...queued,

@@ -48,7 +48,7 @@ const RATE_COLUMNS: SimpleTableColumn[] = [
 
 const USAGE_COLUMNS: SimpleTableColumn[] = [
 	{ id: "currency", header: "Currency" },
-	{ id: "deals", header: "Deals", width: "w-20", align: "right" },
+	{ id: "matters", header: "Matters", width: "w-20", align: "right" },
 	{ id: "convertible", header: "Convertible", width: "w-32", align: "right" },
 ];
 
@@ -136,7 +136,7 @@ export function CurrencySettings() {
 					<CardTitle>Reporting currency</CardTitle>
 					<CardDescription>
 						Every total, chart and average in the CRM is expressed in this
-						currency. Each deal keeps the currency it was sold in.
+						currency. Each matter keeps the currency it was sold in.
 					</CardDescription>
 				</CardHeader>
 
@@ -161,7 +161,7 @@ export function CurrencySettings() {
 						</Select>
 						<FieldDescription>
 							{canManage
-								? "Changing this re-converts every deal at today's rates. Figures already reported will move."
+								? "Changing this re-converts every matter at today's rates. Figures already reported will move."
 								: "Only an owner or an admin can change how money is reported."}
 						</FieldDescription>
 					</Field>
@@ -301,8 +301,8 @@ export function CurrencySettings() {
 					<CardTitle>Currencies in use</CardTitle>
 					<CardDescription>
 						{unconverted.count === 0
-							? "Every deal with an amount can be converted into the reporting currency."
-							: `${formatCount(unconverted.count, "deal")} cannot be converted, so ${unconverted.count === 1 ? "it is" : "they are"} left out of every total.`}
+							? "Every matter with an amount can be converted into the reporting currency."
+							: `${formatCount(unconverted.count, "matter")} cannot be converted, so ${unconverted.count === 1 ? "it is" : "they are"} left out of every total.`}
 						{refreshedAt ? (
 							<>
 								{" "}
@@ -313,7 +313,7 @@ export function CurrencySettings() {
 				</CardHeader>
 
 				{inUse.length === 0 ? (
-					<CardTableEmpty>No deals have an amount yet.</CardTableEmpty>
+					<CardTableEmpty>No matters have an amount yet.</CardTableEmpty>
 				) : (
 					<SimpleTable columns={USAGE_COLUMNS}>
 						{inUse.map((row) => (
@@ -331,7 +331,7 @@ export function CurrencySettings() {
 									) : null}
 								</TableCell>
 								<TableCell className={`${CELL} text-right tabular-nums`}>
-									{row.deals}
+									{row.matters}
 								</TableCell>
 								<TableCell className={`${CELL} text-right`}>
 									{row.convertible ? (

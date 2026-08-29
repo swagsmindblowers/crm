@@ -524,7 +524,7 @@ export class AgentTriggerService {
 		const recordIds = {
 			contactId: input.record.kind === "contact" ? input.record.id : null,
 			companyId: input.record.kind === "company" ? input.record.id : null,
-			dealId: input.record.kind === "deal" ? input.record.id : null,
+			matterId: input.record.kind === "matter" ? input.record.id : null,
 		};
 		await tx.agentTask.create({
 			data: {

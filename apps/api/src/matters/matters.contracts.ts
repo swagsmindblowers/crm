@@ -1,4 +1,4 @@
-import { DealStage } from "@crm/db";
+import { MatterStage } from "@crm/db";
 import { FIELD_ENTITIES, FIELD_TYPES } from "@crm/db/fields";
 import { z } from "zod";
 import { bulkIdsInput } from "../crm/bulk";
@@ -26,7 +26,7 @@ export const CLOSING_WINDOWS = [
 
 export type ClosingWindow = (typeof CLOSING_WINDOWS)[number];
 
-export const dealListInput = listInput.extend({
+export const matterListInput = listInput.extend({
 	status: z.string().default("all"),
 	owner: z.array(z.string()).default([]),
 	stage: z.array(z.string()).default([]),
@@ -35,25 +35,25 @@ export const dealListInput = listInput.extend({
 	archived: z.boolean().default(false),
 });
 
-export type DealListInput = z.infer<typeof dealListInput>;
+export type MatterListInput = z.infer<typeof matterListInput>;
 
 const stageEnum = z.enum(
-	Object.values(DealStage) as [DealStage, ...DealStage[]],
+	Object.values(MatterStage) as [MatterStage, ...MatterStage[]],
 );
 
-export const dealCreateInput = z.object({
-	name: z.string().trim().min(1, "A deal needs a name."),
-	companyId: z.string().min(1, "A deal belongs to a company."),
-	ownerId: z.string().min(1, "A deal needs an owner."),
+export const matterCreateInput = z.object({
+	name: z.string().trim().min(1, "A matter needs a name."),
+	companyId: z.string().min(1, "A matter belongs to a company."),
+	ownerId: z.string().min(1, "A matter needs an owner."),
 	stage: stageEnum.optional(),
 	amountCents,
 	currency: currencyCode.optional(),
 	expectedCloseDate: z.string().nullable().optional(),
 });
 
-export type DealCreateInput = z.infer<typeof dealCreateInput>;
+export type MatterCreateInput = z.infer<typeof matterCreateInput>;
 
-const dealUpdateInput = z.object({
+const matterUpdateInput = z.object({
 	name: z.string().trim().min(1).optional(),
 	description: z.string().nullable().optional(),
 	companyId: z.string().optional(),
@@ -64,14 +64,14 @@ const dealUpdateInput = z.object({
 	fields: recordFieldValues.optional(),
 });
 
-export type DealUpdateInput = z.infer<typeof dealUpdateInput>;
+export type MatterUpdateInput = z.infer<typeof matterUpdateInput>;
 
-export const dealUpdateArgs = z.object({
+export const matterUpdateArgs = z.object({
 	id: z.string(),
-	data: dealUpdateInput,
+	data: matterUpdateInput,
 });
 
-export const dealIdInput = z.object({ id: z.string() });
+export const matterIdInput = z.object({ id: z.string() });
 
 export const setStageInput = z.object({
 	id: z.string(),
@@ -81,51 +81,51 @@ export const setStageInput = z.object({
 
 export type SetStageInput = z.infer<typeof setStageInput>;
 
-const dealContactRole = z
+const matterContactRole = z
 	.string()
 	.trim()
 	.max(80, "That role is too long.")
 	.nullable();
 
-export const dealContactsInput = z.object({ dealId: z.string() });
+export const matterContactsInput = z.object({ matterId: z.string() });
 
-export const dealAttachContactInput = z.object({
-	dealId: z.string(),
-	contactId: z.string().min(1, "Choose somebody to bring onto the deal."),
-	role: dealContactRole.optional(),
+export const matterAttachContactInput = z.object({
+	matterId: z.string(),
+	contactId: z.string().min(1, "Choose somebody to bring onto the matter."),
+	role: matterContactRole.optional(),
 });
 
-export type DealAttachContactInput = z.infer<typeof dealAttachContactInput>;
+export type MatterAttachContactInput = z.infer<typeof matterAttachContactInput>;
 
-export const dealDetachContactInput = z.object({
-	dealId: z.string(),
+export const matterDetachContactInput = z.object({
+	matterId: z.string(),
 	contactId: z.string(),
 });
 
-export type DealDetachContactInput = z.infer<typeof dealDetachContactInput>;
+export type MatterDetachContactInput = z.infer<typeof matterDetachContactInput>;
 
-export const dealContactRoleInput = z.object({
-	dealId: z.string(),
+export const matterContactRoleInput = z.object({
+	matterId: z.string(),
 	contactId: z.string(),
-	role: dealContactRole,
+	role: matterContactRole,
 });
 
-export type DealContactRoleInput = z.infer<typeof dealContactRoleInput>;
+export type MatterContactRoleInput = z.infer<typeof matterContactRoleInput>;
 
-export const dealBulkInput = bulkIdsInput;
+export const matterBulkInput = bulkIdsInput;
 
-export const dealBulkOwnerInput = bulkIdsInput.extend({
-	ownerId: z.string().min(1, "A deal needs an owner."),
+export const matterBulkOwnerInput = bulkIdsInput.extend({
+	ownerId: z.string().min(1, "A matter needs an owner."),
 });
 
-export type DealBulkOwnerInput = z.infer<typeof dealBulkOwnerInput>;
+export type MatterBulkOwnerInput = z.infer<typeof matterBulkOwnerInput>;
 
-export const dealBulkStageInput = bulkIdsInput.extend({
+export const matterBulkStageInput = bulkIdsInput.extend({
 	stage: stageEnum,
 	closedReason: z.string().trim().optional(),
 });
 
-export type DealBulkStageInput = z.infer<typeof dealBulkStageInput>;
+export type MatterBulkStageInput = z.infer<typeof matterBulkStageInput>;
 
 const fieldValueOutput = z.union([
 	z.string(),
@@ -159,14 +159,14 @@ const recordFieldOutput = z.object({
 	value: fieldValueOutput,
 });
 
-const dealOwnerOutput = z.object({
+const matterOwnerOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	email: z.string(),
 	image: z.string().nullable(),
 });
 
-const dealCompanyOutput = z.object({
+const matterCompanyOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	domain: z.string().nullable(),
@@ -176,11 +176,11 @@ const dealCompanyOutput = z.object({
 	logoUrl: z.string().nullable(),
 });
 
-const dealCompanyDetailOutput = dealCompanyOutput.extend({
+const matterCompanyDetailOutput = matterCompanyOutput.extend({
 	industry: z.string().nullable(),
 });
 
-const dealContactSummaryOutput = z.object({
+const matterContactSummaryOutput = z.object({
 	id: z.string(),
 	firstName: z.string(),
 	lastName: z.string().nullable(),
@@ -189,17 +189,17 @@ const dealContactSummaryOutput = z.object({
 	imageUrl: z.string().nullable(),
 });
 
-const dealContactOutput = dealContactSummaryOutput.extend({
+const matterContactOutput = matterContactSummaryOutput.extend({
 	role: z.string().nullable(),
 });
 
-const dealListRowOutput = z.object({
+const matterListRowOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	stage: stageEnum,
 	currency: z.string(),
-	company: dealCompanyOutput,
-	owner: dealOwnerOutput,
+	company: matterCompanyOutput,
+	owner: matterOwnerOutput,
 	amountCents: z.number().nullable(),
 	baseAmountCents: z.number().nullable(),
 	expectedCloseDate: z.string().nullable(),
@@ -210,8 +210,8 @@ const dealListRowOutput = z.object({
 	fields: z.record(z.string(), fieldValueOutput),
 });
 
-export const dealListOutput = z.object({
-	rows: z.array(dealListRowOutput),
+export const matterListOutput = z.object({
+	rows: z.array(matterListRowOutput),
 	total: z.number(),
 	facetCounts: z.record(z.string(), z.record(z.string(), z.number())),
 	openValueCents: z.number().nullable(),
@@ -222,17 +222,17 @@ export const dealListOutput = z.object({
 	}),
 });
 
-export type DealListResult = z.infer<typeof dealListOutput>;
+export type MatterListResult = z.infer<typeof matterListOutput>;
 
-export const dealDetailOutput = z.object({
+export const matterDetailOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
 	stage: stageEnum,
 	currency: z.string(),
 	closedReason: z.string().nullable(),
-	company: dealCompanyDetailOutput,
-	owner: dealOwnerOutput,
+	company: matterCompanyDetailOutput,
+	owner: matterOwnerOutput,
 	fields: z.array(recordFieldOutput),
 	amountCents: z.number().nullable(),
 	baseAmountCents: z.number().nullable(),
@@ -244,58 +244,58 @@ export const dealDetailOutput = z.object({
 	closedAt: z.string().nullable(),
 	createdAt: z.string(),
 	archivedAt: z.string().nullable(),
-	contacts: z.array(dealContactOutput),
+	contacts: z.array(matterContactOutput),
 });
 
-export type DealDetail = z.infer<typeof dealDetailOutput>;
+export type MatterDetail = z.infer<typeof matterDetailOutput>;
 
-export const dealCreateOutput = z.object({
+export const matterCreateOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	companyId: z.string(),
 });
 
-export type DealCreated = z.infer<typeof dealCreateOutput>;
+export type MatterCreated = z.infer<typeof matterCreateOutput>;
 
-export const dealMutateOutput = z.object({
+export const matterMutateOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 });
 
-export type DealMutated = z.infer<typeof dealMutateOutput>;
+export type MatterMutated = z.infer<typeof matterMutateOutput>;
 
-export const dealSetStageOutput = z.object({
+export const matterSetStageOutput = z.object({
 	id: z.string(),
 	stage: stageEnum,
 	changed: z.boolean(),
 });
 
-export type DealSetStageResult = z.infer<typeof dealSetStageOutput>;
+export type MatterSetStageResult = z.infer<typeof matterSetStageOutput>;
 
-export const dealContactOptionsOutput = z.array(dealContactSummaryOutput);
+export const matterContactOptionsOutput = z.array(matterContactSummaryOutput);
 
-export type DealContactOption = z.infer<typeof dealContactSummaryOutput>;
+export type MatterContactOption = z.infer<typeof matterContactSummaryOutput>;
 
-export const dealContactLinkOutput = z.object({
-	dealId: z.string(),
+export const matterContactLinkOutput = z.object({
+	matterId: z.string(),
 	contactId: z.string(),
 });
 
-export type DealContactLink = z.infer<typeof dealContactLinkOutput>;
+export type MatterContactLink = z.infer<typeof matterContactLinkOutput>;
 
-export const dealContactRoleOutput = z.object({
-	dealId: z.string(),
+export const matterContactRoleOutput = z.object({
+	matterId: z.string(),
 	contactId: z.string(),
 	role: z.string().nullable(),
 });
 
-export type DealContactRoleResult = z.infer<typeof dealContactRoleOutput>;
+export type MatterContactRoleResult = z.infer<typeof matterContactRoleOutput>;
 
-export const dealBulkResultOutput = z.object({
+export const matterBulkResultOutput = z.object({
 	requested: z.number(),
 	succeeded: z.number(),
 	failed: z.number(),
 	message: z.string().nullable(),
 });
 
-export type DealBulkResult = z.infer<typeof dealBulkResultOutput>;
+export type MatterBulkResult = z.infer<typeof matterBulkResultOutput>;

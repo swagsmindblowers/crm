@@ -119,7 +119,7 @@ export type CrmHistory = {
 			industry: string | null;
 		} | null;
 	};
-	deals: {
+	matters: {
 		id: string;
 		name: string;
 		stage: string;
@@ -177,11 +177,11 @@ export async function readCrmHistory(
 			company: {
 				select: { id: true, name: true, domain: true, industry: true },
 			},
-			deals: {
-				orderBy: { deal: { lastActivityAt: "desc" } },
+			matters: {
+				orderBy: { matter: { lastActivityAt: "desc" } },
 				select: {
 					role: true,
-					deal: {
+					matter: {
 						select: {
 							id: true,
 							name: true,
@@ -274,14 +274,14 @@ export async function readCrmHistory(
 			companyName: contact.company?.name ?? null,
 			company: contact.company,
 		},
-		deals: contact.deals.map(({ role, deal }) => ({
-			id: deal.id,
-			name: deal.name,
-			stage: deal.stage,
+		matters: contact.matters.map(({ role, matter }) => ({
+			id: matter.id,
+			name: matter.name,
+			stage: matter.stage,
 			role,
-			amount: deal.amount === null ? null : Number(deal.amount),
-			currency: deal.currency,
-			expectedCloseDate: deal.expectedCloseDate?.toISOString() ?? null,
+			amount: matter.amount === null ? null : Number(matter.amount),
+			currency: matter.currency,
+			expectedCloseDate: matter.expectedCloseDate?.toISOString() ?? null,
 		})),
 		threads: threads.map((thread) => ({
 			subject: thread.subject,

@@ -9,16 +9,16 @@ import {
 import { TableCell } from "@crm/ui/components/table";
 import { formatMoney } from "@crm/ui/lib/format";
 import { CompanyCell } from "@/components/crm/company-cell";
-import { DealStageIndicator } from "@/components/crm/deal-stage";
+import { MatterStageIndicator } from "@/components/crm/matter-stage";
 import { OwnerCell } from "@/components/crm/owner-cell";
 import { usePrefetchRecord } from "@/components/crm/record-sheet/record-prefetch";
 import { useOpenRecord } from "@/components/crm/record-sheet/record-stack";
 import { LocalDay } from "@/components/local-date-time";
-import type { DealListItem, DealListResult } from "@/lib/agent-transcript";
-import { DEAL_STAGE_OPTIONS } from "@/lib/deal-stage";
+import type { MatterListItem, MatterListResult } from "@/lib/agent-transcript";
+import { MATTER_STAGE_OPTIONS } from "@/lib/matter-stage";
 
 const COLUMNS: SimpleTableColumn[] = [
-	{ id: "deal", header: "Deal", width: "w-[20%]" },
+	{ id: "matter", header: "Matter", width: "w-[20%]" },
 	{ id: "company", header: "Company", width: "w-[18%]" },
 	{ id: "stage", header: "Stage", width: "w-[18%]" },
 	{
@@ -32,10 +32,10 @@ const COLUMNS: SimpleTableColumn[] = [
 	{ id: "idle", header: "Idle", width: "w-[8%]", align: "right" },
 ];
 
-export function DealListResultTable({ result }: { result: DealListResult }) {
+export function MatterListResultTable({ result }: { result: MatterListResult }) {
 	const openRecord = useOpenRecord();
 	const prefetchRecord = usePrefetchRecord();
-	const count = result.deals.length;
+	const count = result.matters.length;
 	const title = tableTitle(result);
 
 	return (
@@ -51,16 +51,16 @@ export function DealListResultTable({ result }: { result: DealListResult }) {
 							colSpan={COLUMNS.length}
 							className="h-32 whitespace-normal py-8 text-center align-middle text-muted-foreground"
 						>
-							No deals met these pipeline filters.
+							No matters met these pipeline filters.
 						</TableCell>
 					</SimpleTableRow>
 				) : (
-					result.deals.map((deal) => {
-						const record = { kind: "deal" as const, id: deal.id };
+					result.matters.map((matter) => {
+						const record = { kind: "matter" as const, id: matter.id };
 
 						return (
 							<SimpleTableRow
-								key={deal.id}
+								key={matter.id}
 								clickable
 								onClick={() => openRecord(record)}
 								onFocus={() => prefetchRecord(record)}
@@ -68,34 +68,34 @@ export function DealListResultTable({ result }: { result: DealListResult }) {
 							>
 								<TableCell className="overflow-hidden px-3 py-3">
 									<span className="block truncate font-medium">
-										{deal.name}
+										{matter.name}
 									</span>
 								</TableCell>
 								<TableCell className="overflow-hidden px-3 py-3">
-									<CompanyCell company={deal.company} />
+									<CompanyCell company={matter.company} />
 								</TableCell>
 								<TableCell className="overflow-hidden px-3 py-3">
-									<Stage stage={deal.stage} />
+									<Stage stage={matter.stage} />
 								</TableCell>
 								<TableCell className="overflow-hidden px-3 py-3 text-right">
-									{deal.amount === null ? (
+									{matter.amount === null ? (
 										<EmptyCellValue />
 									) : (
 										<span className="tabular-nums">
 											{formatMoney(
-												Math.round(deal.amount * 100),
-												deal.currency,
+												Math.round(matter.amount * 100),
+												matter.currency,
 											)}
 										</span>
 									)}
 								</TableCell>
 								<TableCell className="overflow-hidden px-3 py-3">
-									<OwnerCell owner={deal.owner} />
+									<OwnerCell owner={matter.owner} />
 								</TableCell>
 								<TableCell className="overflow-hidden px-3 py-3">
-									{deal.expectedCloseDate ? (
+									{matter.expectedCloseDate ? (
 										<span className="text-muted-foreground">
-											<LocalDay date={deal.expectedCloseDate} />
+											<LocalDay date={matter.expectedCloseDate} />
 										</span>
 									) : (
 										<EmptyCellValue />
@@ -104,12 +104,12 @@ export function DealListResultTable({ result }: { result: DealListResult }) {
 								<TableCell
 									className="overflow-hidden px-3 py-3 text-right text-muted-foreground tabular-nums"
 									title={
-										deal.neverActive
+										matter.neverActive
 											? "No activity has ever been recorded"
 											: undefined
 									}
 								>
-									{deal.daysSinceLastActivity}d
+									{matter.daysSinceLastActivity}d
 								</TableCell>
 							</SimpleTableRow>
 						);
@@ -127,30 +127,30 @@ export function DealListResultTable({ result }: { result: DealListResult }) {
 }
 
 function Stage({ stage }: { stage: string }) {
-	const option = DEAL_STAGE_OPTIONS.find(
+	const option = MATTER_STAGE_OPTIONS.find(
 		(candidate) => candidate.value === stage,
 	);
 	return option ? (
-		<DealStageIndicator stage={option.value} />
+		<MatterStageIndicator stage={option.value} />
 	) : (
 		<span className="text-muted-foreground">{humaniseStage(stage)}</span>
 	);
 }
 
-function tableTitle(result: DealListResult): string {
-	const count = result.deals.length;
+function tableTitle(result: MatterListResult): string {
+	const count = result.matters.length;
 	const status =
 		result.criteria.status === "all" ? "" : `${result.criteria.status} `;
 	const stale = result.criteria.inactiveForDays === null ? "" : "stale ";
 	return count === 0
-		? "No matching deals"
-		: `${count} ${stale}${status}deal${count === 1 ? "" : "s"}`;
+		? "No matching matters"
+		: `${count} ${stale}${status}matter${count === 1 ? "" : "s"}`;
 }
 
-function tableMeta(result: DealListResult): string {
+function tableMeta(result: MatterListResult): string {
 	const details = [
-		`${result.deals.length} deal${result.deals.length === 1 ? "" : "s"}`,
-		pipelineTotal(result.deals),
+		`${result.matters.length} matter${result.matters.length === 1 ? "" : "s"}`,
+		pipelineTotal(result.matters),
 		result.criteria.inactiveForDays === null
 			? null
 			: `${result.criteria.inactiveForDays}+ days inactive`,
@@ -168,13 +168,13 @@ function humaniseStage(stage: string): string {
 		.join(" ");
 }
 
-function pipelineTotal(deals: readonly DealListItem[]): string | null {
-	const currencies = new Set(deals.map((deal) => deal.currency));
+function pipelineTotal(matters: readonly MatterListItem[]): string | null {
+	const currencies = new Set(matters.map((matter) => matter.currency));
 	if (currencies.size !== 1) return null;
 
 	const currency = currencies.values().next().value;
 	if (!currency) return null;
 
-	const amount = deals.reduce((sum, deal) => sum + (deal.amount ?? 0), 0);
+	const amount = matters.reduce((sum, matter) => sum + (matter.amount ?? 0), 0);
 	return `${formatMoney(Math.round(amount * 100), currency)} pipeline`;
 }

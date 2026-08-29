@@ -40,7 +40,7 @@ const WITH_OPTIONS = {
 const RELATIONS = {
 	COMPANY: "company",
 	CONTACT: "contact",
-	DEAL: "deal",
+	MATTER: "matter",
 } as const satisfies Record<FieldEntity, string>;
 
 @Injectable()
@@ -376,7 +376,7 @@ export class FieldsService {
 							select: { id: true },
 							take: cap,
 						})
-					: await this.db.deal.findMany({
+					: await this.db.matter.findMany({
 							where,
 							select: { id: true },
 							take: cap,
@@ -403,7 +403,7 @@ export class FieldsService {
 				? this.db.company.count()
 				: definition.entity === "CONTACT"
 					? this.db.contact.count()
-					: this.db.deal.count(),
+					: this.db.matter.count(),
 		]);
 
 		return { filled, total };
@@ -516,7 +516,7 @@ export class FieldsService {
 		relationWhere:
 			| Prisma.CompanyWhereInput
 			| Prisma.ContactWhereInput
-			| Prisma.DealWhereInput,
+			| Prisma.MatterWhereInput,
 		definitions: FieldDefinitionWithOptions[],
 	): Promise<Record<string, Record<string, number>>> {
 		const facetCounts: Record<string, Record<string, number>> = {};

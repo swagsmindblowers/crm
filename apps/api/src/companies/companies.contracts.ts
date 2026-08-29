@@ -1,4 +1,4 @@
-import { DealStage, EnrichmentStatus, RecordSource } from "@crm/db";
+import { MatterStage, EnrichmentStatus, RecordSource } from "@crm/db";
 import { FIELD_TYPES } from "@crm/db/fields";
 import { z } from "zod";
 import { bulkIdsInput } from "../crm/bulk";
@@ -75,8 +75,8 @@ const companyRecordSource = z.enum(
 	Object.values(RecordSource) as [RecordSource, ...RecordSource[]],
 );
 
-const companyDealStage = z.enum(
-	Object.values(DealStage) as [DealStage, ...DealStage[]],
+const companyMatterStage = z.enum(
+	Object.values(MatterStage) as [MatterStage, ...MatterStage[]],
 );
 
 const companyFieldType = z.enum(FIELD_TYPES);
@@ -128,7 +128,7 @@ export const companyRowOutput = z.object({
 	source: companyRecordSource,
 	owner: ownerSummaryOutput.nullable(),
 	contactCount: z.number(),
-	openDealCount: z.number(),
+	openMatterCount: z.number(),
 	lastActivityAt: z.string().nullable(),
 	createdAt: z.string(),
 	archivedAt: z.string().nullable(),
@@ -153,10 +153,10 @@ const companyDetailContactOutput = z.object({
 	owner: ownerSummaryOutput.nullable(),
 });
 
-const companyDetailDealOutput = z.object({
+const companyDetailMatterOutput = z.object({
 	id: z.string(),
 	name: z.string(),
-	stage: companyDealStage,
+	stage: companyMatterStage,
 	currency: z.string(),
 	expectedCloseDate: z.string().nullable(),
 	owner: ownerSummaryOutput.nullable(),
@@ -211,7 +211,7 @@ export const companyDetailOutput = z.object({
 	primaryContactId: z.string().nullable(),
 	primaryContact: companyDetailPrimaryContactOutput.nullable(),
 	reportingCurrency: z.string(),
-	deals: z.array(companyDetailDealOutput),
+	matters: z.array(companyDetailMatterOutput),
 });
 
 export const companyOptionOutput = z.array(

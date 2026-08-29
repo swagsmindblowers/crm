@@ -1,4 +1,4 @@
-import { ActivityType, DealStage } from "@crm/db";
+import { ActivityType, MatterStage } from "@crm/db";
 import { activityMeta } from "@crm/validation/activity-meta";
 import { z } from "zod";
 
@@ -11,7 +11,7 @@ export const dashboardSummaryInput = z.object({
 export type DashboardSummaryInput = z.infer<typeof dashboardSummaryInput>;
 
 const stageEnum = z.enum(
-	Object.values(DealStage) as [DealStage, ...DealStage[]],
+	Object.values(MatterStage) as [MatterStage, ...MatterStage[]],
 );
 
 const ownerOutput = z.object({
@@ -53,7 +53,7 @@ const unconvertedOutput = z.object({
 	currencies: z.array(z.string()),
 });
 
-const biggestOpenDealOutput = z.object({
+const biggestOpenMatterOutput = z.object({
 	id: z.string(),
 	name: z.string(),
 	stage: stageEnum,
@@ -70,7 +70,7 @@ const overdueTaskOutput = z.object({
 	id: z.string(),
 	subject: z.string().nullable(),
 	company: linkedRecordOutput.nullable(),
-	deal: linkedRecordOutput.nullable(),
+	matter: linkedRecordOutput.nullable(),
 	dueAt: z.string().nullable(),
 });
 
@@ -81,7 +81,7 @@ const recentActivityOutput = z.object({
 	body: z.string().nullable(),
 	createdBy: ownerOutput,
 	company: linkedRecordOutput.nullable(),
-	deal: linkedRecordOutput.nullable(),
+	matter: linkedRecordOutput.nullable(),
 	createdAt: z.string(),
 	meta: activityMeta,
 });
@@ -93,7 +93,7 @@ export const dashboardSummaryOutput = z.object({
 	pipeline: z.object({
 		stages: z.array(stageBucketOutput),
 		totalCents: z.number(),
-		totalDeals: z.number(),
+		totalMatters: z.number(),
 	}),
 	wonThisMonth: monthlyTotalOutput,
 	wonPrevMonth: monthlyTotalOutput,
@@ -102,12 +102,12 @@ export const dashboardSummaryOutput = z.object({
 		wins: z.number(),
 		losses: z.number(),
 		winRate: z.number().nullable(),
-		avgDealCents: z.number().nullable(),
+		avgMatterCents: z.number().nullable(),
 		avgCycleDays: z.number().nullable(),
 	}),
 	trend: z.array(trendPointOutput),
 	closingThisMonthTotal: monthlyTotalOutput,
-	biggestOpen: z.array(biggestOpenDealOutput),
+	biggestOpen: z.array(biggestOpenMatterOutput),
 	overdueTasks: z.array(overdueTaskOutput),
 	recentActivity: z.array(recentActivityOutput),
 });

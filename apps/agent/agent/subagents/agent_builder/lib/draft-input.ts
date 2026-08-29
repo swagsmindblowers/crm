@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { DraftAgentInput } from "../../../lib/builder-runtime";
 
 const recordResource = z.object({
-	kind: z.enum(["company", "contact", "deal"]),
+	kind: z.enum(["company", "contact", "matter"]),
 	id: z.string().min(1),
 	label: z.string().min(1).max(120),
 });

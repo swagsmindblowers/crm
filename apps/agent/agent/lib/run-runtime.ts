@@ -8,7 +8,7 @@ import {
 	parseAgentManifest,
 } from "@crm/validation/agent-manifest";
 import { z } from "zod";
-import { readCompanyHistory, readDealHistory } from "./accounts";
+import { readCompanyHistory, readMatterHistory } from "./accounts";
 import { AGENT_ACTION_EXECUTORS, isAgentActionType } from "./agent-actions";
 import { readCrmHistory } from "./crm";
 import { DISPATCH } from "./dispatch-config";
@@ -166,7 +166,7 @@ export async function queryRunCrm(
 	runId: string,
 	input: {
 		query: string;
-		kinds?: ("contact" | "company" | "deal")[];
+		kinds?: ("contact" | "company" | "matter")[];
 		limit: number;
 	},
 ) {
@@ -186,20 +186,20 @@ export async function queryRunCrm(
 	const companies = result.companies.filter((row) =>
 		allowed.has(`company:${row.id}`),
 	);
-	const deals = result.deals.filter((row) => allowed.has(`deal:${row.id}`));
+	const matters = result.matters.filter((row) => allowed.has(`matter:${row.id}`));
 	return {
 		...result,
 		contacts,
 		companies,
-		deals,
-		total: contacts.length + companies.length + deals.length,
+		matters,
+		total: contacts.length + companies.length + matters.length,
 	};
 }
 
 export async function readRunRecord(
 	runId: string,
 	input: {
-		kind: "contact" | "company" | "deal";
+		kind: "contact" | "company" | "matter";
 		id: string;
 	},
 ) {
@@ -221,7 +221,7 @@ export async function readRunRecord(
 			includeCalendar: sources.calendar,
 		});
 	}
-	return readDealHistory(input.id, {
+	return readMatterHistory(input.id, {
 		threads: 10,
 		includeEmail: sources.gmail,
 		includeCalendar: sources.calendar,
@@ -233,7 +233,7 @@ export async function createRunActivity(
 	callId: string,
 	input: {
 		type: "NOTE" | "TASK";
-		targetKind: "company" | "contact" | "deal";
+		targetKind: "company" | "contact" | "matter";
 		targetId: string;
 		subject?: string | null;
 		body?: string | null;
@@ -326,7 +326,7 @@ export async function createRunActivity(
 					dueAt: input.type === "TASK" ? dueAt : null,
 					companyId: target.companyId,
 					contactId: target.contactId,
-					dealId: target.dealId,
+					matterId: target.matterId,
 					createdById: run.initiatedById ?? run.agent.createdById,
 					meta: {
 						source: "agent",
@@ -350,9 +350,9 @@ export async function createRunActivity(
 					data: { lastActivityAt: now },
 				});
 			}
-			if (target.dealId) {
-				await tx.deal.update({
-					where: { id: target.dealId },
+			if (target.matterId) {
+				await tx.matter.update({
+					where: { id: target.matterId },
 					data: { lastActivityAt: now },
 				});
 			}
@@ -1058,7 +1058,7 @@ export function approvedSlackDestination(
 function assertResourceAllowed(
 	mode: RunRecordScope,
 	resources: AgentManifestResource[],
-	input: { kind: "contact" | "company" | "deal"; id: string },
+	input: { kind: "contact" | "company" | "matter"; id: string },
 ) {
 	if (mode === "WORKSPACE") return;
 	const records = resources.filter(
@@ -1090,7 +1090,7 @@ export function allowedHistorySources(
 	};
 }
 
-async function targetRecord(kind: "company" | "contact" | "deal", id: string) {
+async function targetRecord(kind: "company" | "contact" | "matter", id: string) {
 	if (kind === "company") {
 		const company = await db.company.findUnique({
 			where: { id },
@@ -1101,7 +1101,7 @@ async function targetRecord(kind: "company" | "contact" | "deal", id: string) {
 					label: company.name,
 					companyId: company.id,
 					contactId: null,
-					dealId: null,
+					matterId: null,
 				}
 			: null;
 	}
@@ -1117,28 +1117,28 @@ async function targetRecord(kind: "company" | "contact" | "deal", id: string) {
 						.join(" "),
 					companyId: contact.companyId,
 					contactId: contact.id,
-					dealId: null,
+					matterId: null,
 				}
 			: null;
 	}
 
-	const deal = await db.deal.findUnique({
+	const matter = await db.matter.findUnique({
 		where: { id },
 		select: { id: true, name: true, companyId: true },
 	});
-	return deal
+	return matter
 		? {
-				label: deal.name,
-				companyId: deal.companyId,
+				label: matter.name,
+				companyId: matter.companyId,
 				contactId: null,
-				dealId: deal.id,
+				matterId: matter.id,
 			}
 		: null;
 }
 
 function actionRequestHash(input: {
 	type: "NOTE" | "TASK";
-	targetKind: "company" | "contact" | "deal";
+	targetKind: "company" | "contact" | "matter";
 	targetId: string;
 	subject?: string | null;
 	body?: string | null;

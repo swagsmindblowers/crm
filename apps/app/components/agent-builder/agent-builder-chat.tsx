@@ -103,7 +103,7 @@ const BUILDER_STEP_ARTIFACTS = [
 	"agent/README.md",
 ] as const;
 const submissionResource = z.object({
-	kind: z.enum(["integration", "company", "contact", "deal"]),
+	kind: z.enum(["integration", "company", "contact", "matter"]),
 	id: z.string().min(1),
 	label: z.string().min(1),
 	detail: z.string().nullable().optional().catch(null),
@@ -1492,7 +1492,7 @@ const RESOURCE_ICONS = {
 	integration: Application,
 	company: Building,
 	contact: User,
-	deal: Partnership,
+	matter: Partnership,
 } as const;
 
 function hasQueuedQuestionResponse(

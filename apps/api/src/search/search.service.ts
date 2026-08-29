@@ -3,7 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectDatabase } from "../database/database.constants";
 
 export type SearchHit = {
-	kind: "company" | "contact" | "deal";
+	kind: "company" | "contact" | "matter";
 	id: string;
 	label: string;
 	detail: string | null;
@@ -23,7 +23,7 @@ export class SearchService {
 		const term = q.trim();
 		if (term.length < 2) return { hits: [] };
 
-		const [companies, contacts, deals] = await Promise.all([
+		const [companies, contacts, matters] = await Promise.all([
 			this.db.company.findMany({
 				where: {
 					OR: [
@@ -61,7 +61,7 @@ export class SearchService {
 					company: { select: { name: true } },
 				},
 			}),
-			this.db.deal.findMany({
+			this.db.matter.findMany({
 				where: { name: { contains: term, mode: "insensitive" } },
 				take: PER_KIND,
 				orderBy: [{ stage: "asc" }, { name: "asc" }],
@@ -108,15 +108,15 @@ export class SearchService {
 						imageUrl: contact.imageUrl,
 					}),
 				),
-				...deals.map(
-					(deal): SearchHit => ({
-						kind: "deal",
-						id: deal.id,
-						label: deal.name,
-						detail: deal.company.name,
-						iconUrl: deal.company.iconUrl,
-						iconDarkUrl: deal.company.iconDarkUrl,
-						iconTone: deal.company.iconTone,
+				...matters.map(
+					(matter): SearchHit => ({
+						kind: "matter",
+						id: matter.id,
+						label: matter.name,
+						detail: matter.company.name,
+						iconUrl: matter.company.iconUrl,
+						iconDarkUrl: matter.company.iconDarkUrl,
+						iconTone: matter.company.iconTone,
 						imageUrl: null,
 					}),
 				),

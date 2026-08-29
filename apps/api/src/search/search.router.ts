@@ -8,7 +8,7 @@ import { SearchService } from "./search.service";
 const quickInput = z.object({ q: z.string().default("") });
 
 const searchHitOutput = z.object({
-	kind: z.enum(["company", "contact", "deal"]),
+	kind: z.enum(["company", "contact", "matter"]),
 	id: z.string(),
 	label: z.string(),
 	detail: z.string().nullable(),

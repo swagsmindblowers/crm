@@ -1,12 +1,12 @@
 import type { CarbonIcon } from "@crm/ui/components/icon";
 
-export type AgentRecordKind = "contact" | "company" | "deal";
+export type AgentRecordKind = "contact" | "company" | "matter";
 
 export type AgentRecord = { kind: AgentRecordKind; id: string };
 
 type RecordCopy = {
 	header: string;
-	field: "contactId" | "companyId" | "dealId";
+	field: "contactId" | "companyId" | "matterId";
 	title: string;
 	blurb: string;
 	placeholder: string;
@@ -20,7 +20,7 @@ export type AgentRecordHeader = Record<string, string>;
 export type AgentRecordFilter = {
 	contactId?: string;
 	companyId?: string;
-	dealId?: string;
+	matterId?: string;
 };
 
 const COPY: RecordCopyByKind = {
@@ -50,10 +50,10 @@ const COPY: RecordCopyByKind = {
 			"What has changed recently?",
 		],
 	},
-	deal: {
-		header: "x-crm-deal",
-		field: "dealId",
-		title: "Ask about this deal",
+	matter: {
+		header: "x-crm-matter",
+		field: "matterId",
+		title: "Ask about this matter",
 		blurb:
 			"It can read the thread, the meetings and the people on both sides of it.",
 		placeholder: "Where has this stalled?",

@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { ActivityType, DealStage, db, EmailDirection } from "@crm/db";
-import { readCompanyHistory, readDealHistory } from "../agent/lib/accounts";
+import { ActivityType, MatterStage, db, EmailDirection } from "@crm/db";
+import { readCompanyHistory, readMatterHistory } from "../agent/lib/accounts";
 
 const suffix = process.env.TEST_RUN_ID ?? "accounts-spec";
 const domain = `fernhill-${suffix}.test`;
 
 let companyId: string;
-let dealId: string;
+let matterId: string;
 let paulaId: string;
 let placeholderId: string;
 let userId: string;
@@ -64,12 +64,12 @@ beforeAll(async () => {
 	});
 	placeholderId = placeholder.id;
 
-	const deal = await db.deal.create({
+	const matter = await db.matter.create({
 		data: {
 			name: `Fernhill platform ${suffix}`,
 			companyId,
 			ownerId: userId,
-			stage: DealStage.CONTRACT_SENT,
+			stage: MatterStage.SUBMITTED,
 			stageChangedAt: daysAgo(42),
 			amount: 48_000,
 			currency: "USD",
@@ -79,7 +79,7 @@ beforeAll(async () => {
 		},
 		select: { id: true },
 	});
-	dealId = deal.id;
+	matterId = matter.id;
 
 	await db.activity.createMany({
 		data: [
@@ -87,19 +87,19 @@ beforeAll(async () => {
 				type: ActivityType.STAGE_CHANGE,
 				subject: "Stage changed",
 				companyId,
-				dealId,
+				matterId,
 				createdById: userId,
 				createdAt: daysAgo(60),
-				meta: { from: "DEMO_BOOKED", to: "QUALIFIED_TO_BUY" },
+				meta: { from: "ENQUIRY", to: "INSTRUCTED" },
 			},
 			{
 				type: ActivityType.STAGE_CHANGE,
 				subject: "Stage changed",
 				companyId,
-				dealId,
+				matterId,
 				createdById: userId,
 				createdAt: daysAgo(42),
-				meta: { from: "QUALIFIED_TO_BUY", to: "CONTRACT_SENT" },
+				meta: { from: "INSTRUCTED", to: "SUBMITTED" },
 			},
 			{
 				type: ActivityType.NOTE,
@@ -107,14 +107,14 @@ beforeAll(async () => {
 				body: "They want the security review done before signing.",
 				occurredAt: daysAgo(5),
 				companyId,
-				dealId,
+				matterId,
 				createdById: userId,
 			},
 			{
 				type: ActivityType.EMAIL,
 				subject: "Re: Contract",
 				companyId,
-				dealId,
+				matterId,
 				createdById: userId,
 			},
 		],
@@ -190,7 +190,7 @@ async function cleanup(): Promise<void> {
 		await db.activity.deleteMany({ where: { companyId: company.id } });
 		await db.calendarEvent.deleteMany({ where: { companyId: company.id } });
 		await db.emailThread.deleteMany({ where: { companyId: company.id } });
-		await db.deal.deleteMany({ where: { companyId: company.id } });
+		await db.matter.deleteMany({ where: { companyId: company.id } });
 		await db.contact.deleteMany({ where: { companyId: company.id } });
 		await db.company.delete({ where: { id: company.id } });
 	}
@@ -223,17 +223,17 @@ describe("readCompanyHistory", () => {
 		expect(people[paulaId]).toBe(false);
 	});
 
-	it("returns the deals with stage, value and who is on them", async () => {
+	it("returns the matters with stage, value and who is on them", async () => {
 		const history = await readCompanyHistory(companyId);
-		const deal = history?.deals.find((row) => row.id === dealId);
+		const matter = history?.matters.find((row) => row.id === matterId);
 
-		expect(deal?.stage).toBe("CONTRACT_SENT");
-		expect(deal?.open).toBe(true);
-		expect(deal?.amount).toBe(48_000);
-		expect(deal?.contacts).toEqual([
+		expect(matter?.stage).toBe("SUBMITTED");
+		expect(matter?.open).toBe(true);
+		expect(matter?.amount).toBe(48_000);
+		expect(matter?.contacts).toEqual([
 			{ id: paulaId, name: "Paula Marchetti", role: "Champion" },
 		]);
-		expect(history?.stats.openDeals).toBe(1);
+		expect(history?.stats.openMatters).toBe(1);
 	});
 
 	it("reads the correspondence and knows they replied", async () => {
@@ -281,26 +281,26 @@ describe("readCompanyHistory", () => {
 	});
 });
 
-describe("readDealHistory", () => {
+describe("readMatterHistory", () => {
 	it("reports the stage clock, not just the stage", async () => {
-		const history = await readDealHistory(dealId);
+		const history = await readMatterHistory(matterId);
 
-		expect(history?.deal.stage).toBe("CONTRACT_SENT");
-		expect(history?.deal.open).toBe(true);
-		expect(history?.deal.daysInStage).toBeGreaterThanOrEqual(41);
+		expect(history?.matter.stage).toBe("SUBMITTED");
+		expect(history?.matter.open).toBe(true);
+		expect(history?.matter.daysInStage).toBeGreaterThanOrEqual(41);
 	});
 
 	it("returns every stage it moved through, oldest first", async () => {
-		const history = await readDealHistory(dealId);
+		const history = await readMatterHistory(matterId);
 
 		expect(history?.stageHistory.map((change) => change.to)).toEqual([
-			"QUALIFIED_TO_BUY",
-			"CONTRACT_SENT",
+			"INSTRUCTED",
+			"SUBMITTED",
 		]);
 	});
 
 	it("names who is on it, with ids and roles", async () => {
-		const history = await readDealHistory(dealId);
+		const history = await readMatterHistory(matterId);
 
 		expect(history?.people).toEqual([
 			{
@@ -314,16 +314,16 @@ describe("readDealHistory", () => {
 		expect(history?.company.id).toBe(companyId);
 	});
 
-	it("says the correspondence is the account's, not the deal's", async () => {
-		const history = await readDealHistory(dealId);
+	it("says the correspondence is the account's, not the matter's", async () => {
+		const history = await readMatterHistory(matterId);
 
 		expect(history?.threads).toHaveLength(1);
 		expect(history?.stats.theyReplied).toBe(true);
-		expect(history?.note).toContain("never against a deal");
+		expect(history?.note).toContain("never against a matter");
 	});
 
-	it("omits deal correspondence when connected sources are not approved", async () => {
-		const history = await readDealHistory(dealId, {
+	it("omits matter correspondence when connected sources are not approved", async () => {
+		const history = await readMatterHistory(matterId, {
 			includeEmail: false,
 			includeCalendar: false,
 		});
@@ -335,7 +335,7 @@ describe("readDealHistory", () => {
 		expect(history?.note).toContain("outside this agent version");
 	});
 
-	it("returns null for a deal that does not exist", async () => {
-		expect(await readDealHistory("nope")).toBeNull();
+	it("returns null for a matter that does not exist", async () => {
+		expect(await readMatterHistory("nope")).toBeNull();
 	});
 });

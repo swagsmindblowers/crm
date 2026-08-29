@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { DealStage, db, RateSource } from "@crm/db";
+import { MatterStage, db, RateSource } from "@crm/db";
 import { normalizeCurrency } from "@crm/db/currency";
 import { SETTINGS_ID, writeReportingCurrency } from "@crm/db/settings";
 import type { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
 import { DashboardService } from "../src/dashboard/dashboard.service";
-import { DealsService } from "../src/deals/deals.service";
+import { MattersService } from "../src/matters/matters.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
 
@@ -19,7 +19,7 @@ const agent = {
 } as unknown as AgentTriggerService;
 
 const conversion = new ConversionService(db);
-const deals = new DealsService(
+const matters = new MattersService(
 	db,
 	agent,
 	new ActivityStampService(db),
@@ -101,7 +101,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	await db.deal.deleteMany({ where: { companyId } });
+	await db.matter.deleteMany({ where: { companyId } });
 	await db.company.deleteMany({ where: { domain } });
 	await db.user.deleteMany({ where: { id: userId } });
 	await clearRates();
@@ -117,7 +117,7 @@ afterAll(async () => {
 
 describe("a total across currencies", () => {
 	it("converts on write and never adds two currencies together", async () => {
-		await deals.create({
+		await matters.create({
 			name: `Domestic ${suffix}`,
 			companyId,
 			ownerId: userId,
@@ -125,7 +125,7 @@ describe("a total across currencies", () => {
 			currency: "USD",
 		});
 
-		await deals.create({
+		await matters.create({
 			name: `Continental ${suffix}`,
 			companyId,
 			ownerId: userId,
@@ -136,8 +136,8 @@ describe("a total across currencies", () => {
 		expect(await pipelineCents()).toBe(MILLION + 1.1 * MILLION);
 	});
 
-	it("locks the rate onto the deal, so the row says how it was converted", async () => {
-		const row = await db.deal.findFirst({
+	it("locks the rate onto the matter, so the row says how it was converted", async () => {
+		const row = await db.matter.findFirst({
 			where: { companyId, currency: "EUR" },
 			select: { amount: true, baseAmount: true, fxRate: true, fxRateAt: true },
 		});
@@ -148,10 +148,10 @@ describe("a total across currencies", () => {
 		expect(row?.fxRateAt).toBeInstanceOf(Date);
 	});
 
-	it("leaves a deal it cannot convert out of the total, and says so", async () => {
+	it("leaves a matter it cannot convert out of the total, and says so", async () => {
 		const before = await pipelineCents();
 
-		await deals.create({
+		await matters.create({
 			name: `Alpine ${suffix}`,
 			companyId,
 			ownerId: userId,
@@ -167,7 +167,7 @@ describe("a total across currencies", () => {
 		expect(summary.unconverted.currencies).toEqual(["CHF"]);
 	});
 
-	it("picks the waiting deal up when a rate finally arrives", async () => {
+	it("picks the waiting matter up when a rate finally arrives", async () => {
 		await rate("CHF", "1.25", RateSource.MANUAL);
 
 		const filled = await conversion.fillMissing();
@@ -181,12 +181,12 @@ describe("a total across currencies", () => {
 		expect(summary.unconverted.count).toBe(0);
 	});
 
-	it("does not re-rate a deal that already has a rate", async () => {
+	it("does not re-rate a matter that already has a rate", async () => {
 		await rate("EUR", "9.99", RateSource.FETCHED);
 
 		await conversion.fillMissing();
 
-		const row = await db.deal.findFirst({
+		const row = await db.matter.findFirst({
 			where: { companyId, currency: "EUR" },
 			select: { baseAmount: true },
 		});
@@ -199,7 +199,7 @@ describe("a total across currencies", () => {
 
 		await conversion.rerateAll();
 
-		const row = await db.deal.findFirst({
+		const row = await db.matter.findFirst({
 			where: { companyId, currency: "EUR" },
 			select: { baseAmount: true, fxRate: true },
 		});
@@ -222,12 +222,12 @@ describe("a total across currencies", () => {
 	});
 });
 
-describe("the deals list", () => {
+describe("the matters list", () => {
 	it("reports its open pipeline in the reporting currency and discloses the rest", async () => {
 		await writeReportingCurrency(db, "USD");
 		await conversion.rerateAll();
 
-		const list = await deals.list({
+		const list = await matters.list({
 			q: "",
 			page: 1,
 			pageSize: 25,
@@ -253,7 +253,7 @@ describe("the deals list", () => {
 });
 
 describe("a converted figure knows which currency it is in", () => {
-	it("leaves a deal whose baseAmount predates a currency change out of totals", async () => {
+	it("leaves a matter whose baseAmount predates a currency change out of totals", async () => {
 		await writeReportingCurrency(db, "USD");
 		await conversion.rerateAll();
 
@@ -261,7 +261,7 @@ describe("a converted figure knows which currency it is in", () => {
 		const summary = await dashboard.summary(userId, { scope: "me" });
 		expect(summary.unconverted.count).toBe(0);
 
-		const deal = await deals.create({
+		const matter = await matters.create({
 			name: `Stale ${suffix}`,
 			companyId,
 			ownerId: userId,
@@ -271,8 +271,8 @@ describe("a converted figure knows which currency it is in", () => {
 
 		expect(await pipelineCents()).toBe(before + MILLION);
 
-		await db.deal.update({
-			where: { id: deal.id },
+		await db.matter.update({
+			where: { id: matter.id },
 			data: { baseCurrency: "JPY" },
 		});
 
@@ -286,7 +286,7 @@ describe("a converted figure knows which currency it is in", () => {
 
 		expect(await pipelineCents()).toBe(before + MILLION);
 
-		await db.deal.delete({ where: { id: deal.id } });
+		await db.matter.delete({ where: { id: matter.id } });
 	});
 
 	it("never lets a converted figure with no currency on it go unnoticed", async () => {
@@ -295,7 +295,7 @@ describe("a converted figure knows which currency it is in", () => {
 
 		const before = await pipelineCents();
 
-		const orphan = await db.deal.create({
+		const orphan = await db.matter.create({
 			data: {
 				name: `Orphan ${suffix}`,
 				companyId,
@@ -316,20 +316,20 @@ describe("a converted figure knows which currency it is in", () => {
 
 		await conversion.fillMissing();
 
-		const healed = await db.deal.findUnique({
+		const healed = await db.matter.findUnique({
 			where: { id: orphan.id },
 			select: { baseCurrency: true },
 		});
 		expect(healed?.baseCurrency).toBe("USD");
 		expect(await pipelineCents()).toBe(before + 5_000_000);
 
-		await db.deal.delete({ where: { id: orphan.id } });
+		await db.matter.delete({ where: { id: orphan.id } });
 	});
 
 	it("counts a currency once however it was cased or padded", async () => {
 		const rows = await Promise.all(
 			[" usd ", "Usd"].map((currency, index) =>
-				db.deal.create({
+				db.matter.create({
 					data: {
 						name: `Variant ${index} ${suffix}`,
 						companyId,
@@ -349,7 +349,7 @@ describe("a converted figure knows which currency it is in", () => {
 
 		const rerated = await conversion.rerateAll();
 
-		const written = await db.deal.findMany({
+		const written = await db.matter.findMany({
 			where: { id: { in: rows.map((row) => row.id) } },
 			select: { baseAmount: true, baseCurrency: true },
 		});
@@ -359,7 +359,7 @@ describe("a converted figure knows which currency it is in", () => {
 			expect(row.baseAmount?.toNumber()).toBe(1000);
 		}
 
-		const groups = await db.deal.groupBy({
+		const groups = await db.matter.groupBy({
 			by: ["currency"],
 			where: { amount: { not: null } },
 			_count: { _all: true },
@@ -373,16 +373,16 @@ describe("a converted figure knows which currency it is in", () => {
 
 		expect(rerated.converted).toBe(convertible);
 
-		await db.deal.deleteMany({
+		await db.matter.deleteMany({
 			where: { id: { in: rows.map((row) => row.id) } },
 		});
 	});
 
-	it("keeps a converted deal when the rate behind it has gone away", async () => {
+	it("keeps a converted matter when the rate behind it has gone away", async () => {
 		await writeReportingCurrency(db, "USD");
 		await conversion.rerateAll();
 
-		const deal = await deals.create({
+		const matter = await matters.create({
 			name: `Frozen ${suffix}`,
 			companyId,
 			ownerId: userId,
@@ -390,8 +390,8 @@ describe("a converted figure knows which currency it is in", () => {
 			currency: "EUR",
 		});
 
-		const frozen = await db.deal.findUnique({
-			where: { id: deal.id },
+		const frozen = await db.matter.findUnique({
+			where: { id: matter.id },
 			select: { baseAmount: true },
 		});
 		expect(frozen?.baseAmount).not.toBeNull();
@@ -400,7 +400,7 @@ describe("a converted figure knows which currency it is in", () => {
 
 		await clearRates();
 
-		const stranded = await db.deal.create({
+		const stranded = await db.matter.create({
 			data: {
 				name: `Stranded ${suffix}`,
 				companyId,
@@ -415,16 +415,16 @@ describe("a converted figure knows which currency it is in", () => {
 		expect(filled.missing).toContain("EUR");
 		expect(filled.cleared).toBe(0);
 
-		const kept = await db.deal.findUnique({
-			where: { id: deal.id },
+		const kept = await db.matter.findUnique({
+			where: { id: matter.id },
 			select: { baseAmount: true, baseCurrency: true },
 		});
 		expect(kept?.baseCurrency).toBe("USD");
 		expect(kept?.baseAmount?.toNumber()).toBe(frozen?.baseAmount?.toNumber());
 		expect(await pipelineCents()).toBe(before);
 
-		await db.deal.deleteMany({
-			where: { id: { in: [deal.id, stranded.id] } },
+		await db.matter.deleteMany({
+			where: { id: { in: [matter.id, stranded.id] } },
 		});
 		await rate("EUR", "1.10", RateSource.FETCHED);
 	});
@@ -449,14 +449,14 @@ describe("the dashboard only values what it can convert", () => {
 	});
 
 	afterAll(async () => {
-		await db.deal.deleteMany({ where: { ownerId: analystId } });
+		await db.matter.deleteMany({ where: { ownerId: analystId } });
 		await db.user.deleteMany({ where: { id: analystId } });
 	});
 
-	async function stale(name: string, stage: DealStage) {
-		const closed = stage === DealStage.CLOSED_WON;
+	async function stale(name: string, stage: MatterStage) {
+		const closed = stage === MatterStage.GRANTED;
 
-		return db.deal.create({
+		return db.matter.create({
 			data: {
 				name: `${name} ${suffix}`,
 				companyId,
@@ -474,29 +474,29 @@ describe("the dashboard only values what it can convert", () => {
 		});
 	}
 
-	it("does not average a won deal it cannot value into the rest", async () => {
-		const won = await deals.create({
+	it("does not average a won matter it cannot value into the rest", async () => {
+		const won = await matters.create({
 			name: `Valued win ${suffix}`,
 			companyId,
 			ownerId: analystId,
 			amountCents: 10_000,
 			currency: "USD",
-			stage: DealStage.CLOSED_WON,
+			stage: MatterStage.GRANTED,
 		});
 
-		const unvalued = await stale("Stale win", DealStage.CLOSED_WON);
+		const unvalued = await stale("Stale win", MatterStage.GRANTED);
 
 		const summary = await dashboard.summary(analystId, { scope: "me" });
 
 		expect(summary.performance.wins).toBe(2);
-		expect(summary.performance.avgDealCents).toBe(10_000);
+		expect(summary.performance.avgMatterCents).toBe(10_000);
 		expect(summary.unconverted.count).toBe(1);
 
-		await db.deal.deleteMany({ where: { id: { in: [won.id, unvalued.id] } } });
+		await db.matter.deleteMany({ where: { id: { in: [won.id, unvalued.id] } } });
 	});
 
-	it("does not let a stale figure set the largest open deal", async () => {
-		const open = await deals.create({
+	it("does not let a stale figure set the largest open matter", async () => {
+		const open = await matters.create({
 			name: `Valued open ${suffix}`,
 			companyId,
 			ownerId: analystId,
@@ -504,17 +504,17 @@ describe("the dashboard only values what it can convert", () => {
 			currency: "USD",
 		});
 
-		const unvalued = await stale("Stale open", DealStage.DEMO_BOOKED);
+		const unvalued = await stale("Stale open", MatterStage.ENQUIRY);
 
 		const summary = await dashboard.summary(analystId, { scope: "me" });
 
 		expect(summary.biggestOpen[0]?.id).toBe(open.id);
 		expect(summary.biggestOpen[0]?.baseAmountCents).toBe(10_000);
 		expect(
-			summary.biggestOpen.find((deal) => deal.id === unvalued.id)
+			summary.biggestOpen.find((matter) => matter.id === unvalued.id)
 				?.baseAmountCents,
 		).toBeNull();
 
-		await db.deal.deleteMany({ where: { id: { in: [open.id, unvalued.id] } } });
+		await db.matter.deleteMany({ where: { id: { in: [open.id, unvalued.id] } } });
 	});
 });

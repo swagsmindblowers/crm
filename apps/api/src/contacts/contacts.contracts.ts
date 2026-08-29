@@ -1,5 +1,5 @@
 import {
-	DealStage,
+	MatterStage,
 	EnrichmentStatus,
 	FactBand,
 	FactStatus,
@@ -212,10 +212,10 @@ const contactRelationshipOutput = z.object({
 	colleagues: z.array(contactRelationshipColleagueOutput),
 });
 
-const contactDealOutput = z.object({
+const contactMatterOutput = z.object({
 	id: z.string(),
 	name: z.string(),
-	stage: z.enum(Object.values(DealStage) as [DealStage, ...DealStage[]]),
+	stage: z.enum(Object.values(MatterStage) as [MatterStage, ...MatterStage[]]),
 	currency: z.string(),
 	expectedCloseDate: z.string().nullable(),
 	owner: contactOwnerOutput,
@@ -256,7 +256,7 @@ export const contactByIdOutput = z.object({
 	facts: z.array(contactFactOutput),
 	relationship: contactRelationshipOutput,
 	isPrimaryContact: z.boolean(),
-	deals: z.array(contactDealOutput),
+	matters: z.array(contactMatterOutput),
 });
 
 export const contactBasicOutput = z.object({

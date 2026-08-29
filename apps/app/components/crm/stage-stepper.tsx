@@ -1,37 +1,37 @@
 "use client";
 
-import { DealStage } from "@crm/db/enums";
+import { MatterStage } from "@crm/db/enums";
 import { cn } from "@crm/ui/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { DealStageIndicator } from "@/components/crm/deal-stage";
-import { dealStageLabel, isClosedStage, OPEN_STAGES } from "@/lib/deal-stage";
+import { MatterStageIndicator } from "@/components/crm/matter-stage";
+import { matterStageLabel, isClosedStage, OPEN_STAGES } from "@/lib/matter-stage";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 
-const RAIL = [...OPEN_STAGES, DealStage.CLOSED_WON] as readonly DealStage[];
+const RAIL = [...OPEN_STAGES, MatterStage.GRANTED] as readonly MatterStage[];
 
 export function StageStepper({
-	dealId,
+	matterId,
 	stage,
 }: {
-	dealId: string;
-	stage: DealStage;
+	matterId: string;
+	stage: MatterStage;
 }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
 
 	const setStage = useMutation(
-		trpc.deals.setStage.mutationOptions({
+		trpc.matters.setStage.mutationOptions({
 			onSuccess: async (result) => {
-				await cache.deal(dealId);
+				await cache.matter(matterId);
 				if (result.changed) toast.success("Stage updated.");
 			},
 			onError: (error) => toast.error(error.message),
 		}),
 	);
 
-	const exited = isClosedStage(stage) && stage !== DealStage.CLOSED_WON;
+	const exited = isClosedStage(stage) && stage !== MatterStage.GRANTED;
 	const steps = exited ? OPEN_STAGES : RAIL;
 	const currentIndex = steps.indexOf(stage);
 
@@ -46,7 +46,7 @@ export function StageStepper({
 							type="button"
 							aria-current={current ? "step" : undefined}
 							disabled={setStage.isPending}
-							onClick={() => setStage.mutate({ id: dealId, stage: option })}
+							onClick={() => setStage.mutate({ id: matterId, stage: option })}
 							className={cn(
 								"min-w-0 flex-1 border-t-2 pt-2 text-left text-xs transition-colors disabled:pointer-events-none disabled:opacity-50",
 								reached
@@ -56,10 +56,10 @@ export function StageStepper({
 							)}
 						>
 							<span className="block truncate">
-								{current && option === DealStage.CLOSED_WON ? (
-									<DealStageIndicator stage={stage} className="text-xs" />
+								{current && option === MatterStage.GRANTED ? (
+									<MatterStageIndicator stage={stage} className="text-xs" />
 								) : (
-									dealStageLabel(option)
+									matterStageLabel(option)
 								)}
 							</span>
 						</button>
@@ -70,7 +70,7 @@ export function StageStepper({
 			{exited ? (
 				<li className="flex min-w-0 flex-1">
 					<div className="min-w-0 flex-1 border-foreground border-t-2 pt-2">
-						<DealStageIndicator stage={stage} className="text-xs" />
+						<MatterStageIndicator stage={stage} className="text-xs" />
 					</div>
 				</li>
 			) : null}

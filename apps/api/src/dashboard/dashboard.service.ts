@@ -1,5 +1,5 @@
-import { ActivityType, type Db, DealStage } from "@crm/db";
-import { OPEN_DEAL_STAGES } from "@crm/db/deal-stage";
+import { ActivityType, type Db, MatterStage } from "@crm/db";
+import { OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import { activityMeta } from "@crm/validation/activity-meta";
 import { Injectable } from "@nestjs/common";
 import { toCents } from "../crm/values";
@@ -54,26 +54,26 @@ export class DashboardService {
 		const [
 			openByStage,
 			openValueByStage,
-			recentDeals,
+			recentMatters,
 			closingThisMonthTotals,
 			biggestOpen,
 			overdueTasks,
 			recentActivity,
 			unconverted,
 		] = await Promise.all([
-			this.db.deal.groupBy({
+			this.db.matter.groupBy({
 				by: ["stage"],
-				where: { ...owned, stage: { in: [...OPEN_DEAL_STAGES] } },
+				where: { ...owned, stage: { in: [...OPEN_MATTER_STAGES] } },
 				_count: { _all: true },
 			}),
-			this.db.deal.groupBy({
+			this.db.matter.groupBy({
 				by: ["stage"],
 				where: {
-					AND: [{ ...owned, stage: { in: [...OPEN_DEAL_STAGES] } }, counted],
+					AND: [{ ...owned, stage: { in: [...OPEN_MATTER_STAGES] } }, counted],
 				},
 				_sum: { baseAmount: true },
 			}),
-			this.db.deal.findMany({
+			this.db.matter.findMany({
 				where: {
 					...owned,
 					OR: [
@@ -89,12 +89,12 @@ export class DashboardService {
 					closedAt: true,
 				},
 			}),
-			this.db.deal.aggregate({
+			this.db.matter.aggregate({
 				where: {
 					AND: [
 						{
 							...owned,
-							stage: { in: [...OPEN_DEAL_STAGES] },
+							stage: { in: [...OPEN_MATTER_STAGES] },
 							expectedCloseDate: { gte: startOfMonth, lt: startOfNextMonth },
 						},
 						counted,
@@ -103,8 +103,8 @@ export class DashboardService {
 				_count: { _all: true },
 				_sum: { baseAmount: true },
 			}),
-			this.db.deal.findMany({
-				where: { ...owned, stage: { in: [...OPEN_DEAL_STAGES] } },
+			this.db.matter.findMany({
+				where: { ...owned, stage: { in: [...OPEN_MATTER_STAGES] } },
 				orderBy: [
 					{ baseAmount: { sort: "desc", nulls: "last" } },
 					{ expectedCloseDate: "asc" },
@@ -146,7 +146,7 @@ export class DashboardService {
 					subject: true,
 					dueAt: true,
 					company: { select: { id: true, name: true } },
-					deal: { select: { id: true, name: true } },
+					matter: { select: { id: true, name: true } },
 				},
 			}),
 			this.db.activity.findMany({
@@ -162,17 +162,17 @@ export class DashboardService {
 					meta: true,
 					createdBy: { select: OWNER_SELECT },
 					company: { select: { id: true, name: true } },
-					deal: { select: { id: true, name: true } },
+					matter: { select: { id: true, name: true } },
 				},
 			}),
 			this.conversion.unconverted(owned),
 		]);
 
-		const stages = OPEN_DEAL_STAGES.map((stage) => {
+		const stages = OPEN_MATTER_STAGES.map((stage) => {
 			const group = openByStage.find((row) => row.stage === stage);
 			const value = openValueByStage.find((row) => row.stage === stage);
 			return {
-				stage: stage as DealStage,
+				stage: stage as MatterStage,
 				count: group?._count._all ?? 0,
 				valueCents: toCents(value?._sum.baseAmount ?? null) ?? 0,
 			};
@@ -193,17 +193,17 @@ export class DashboardService {
 		let wonCents = 0;
 		let cycleDays = 0;
 
-		for (const deal of recentDeals) {
+		for (const matter of recentMatters) {
 			const valued =
-				deal.baseCurrency === base ? toCents(deal.baseAmount) : null;
+				matter.baseCurrency === base ? toCents(matter.baseAmount) : null;
 			const cents = valued ?? 0;
 
-			const created = trend[monthKey(deal.createdAt) - firstBucket];
+			const created = trend[monthKey(matter.createdAt) - firstBucket];
 			if (created) created.created += cents;
 
-			const { closedAt, stage } = deal;
+			const { closedAt, stage } = matter;
 			if (!closedAt) continue;
-			const won = stage === DealStage.CLOSED_WON;
+			const won = stage === MatterStage.GRANTED;
 
 			if (won) {
 				const closed = trend[monthKey(closedAt) - firstBucket];
@@ -225,8 +225,8 @@ export class DashboardService {
 					valuedWins += 1;
 					wonCents += cents;
 				}
-				cycleDays += (closedAt.getTime() - deal.createdAt.getTime()) / DAY_MS;
-			} else if (stage === DealStage.CLOSED_LOST) {
+				cycleDays += (closedAt.getTime() - matter.createdAt.getTime()) / DAY_MS;
+			} else if (stage === MatterStage.REFUSED) {
 				losses += 1;
 			}
 		}
@@ -240,7 +240,7 @@ export class DashboardService {
 			pipeline: {
 				stages,
 				totalCents: stages.reduce((total, s) => total + s.valueCents, 0),
-				totalDeals: stages.reduce((total, s) => total + s.count, 0),
+				totalMatters: stages.reduce((total, s) => total + s.count, 0),
 			},
 			wonThisMonth,
 			wonPrevMonth,
@@ -249,7 +249,7 @@ export class DashboardService {
 				wins,
 				losses,
 				winRate: decided === 0 ? null : wins / decided,
-				avgDealCents:
+				avgMatterCents:
 					valuedWins === 0 ? null : Math.round(wonCents / valuedWins),
 				avgCycleDays: wins === 0 ? null : Math.round(cycleDays / wins),
 			},
@@ -266,9 +266,9 @@ export class DashboardService {
 						baseCurrency,
 						expectedCloseDate,
 						stageChangedAt,
-						...deal
+						...matter
 					}) => ({
-						...deal,
+						...matter,
 						amountCents: toCents(amount),
 						baseAmountCents: baseCurrency === base ? toCents(baseAmount) : null,
 						expectedCloseDate: expectedCloseDate?.toISOString() ?? null,

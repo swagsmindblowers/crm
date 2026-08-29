@@ -40,7 +40,7 @@ export class CurrencyService {
 			}),
 			this.rates.refreshedAt(),
 			this.conversion.unconverted(),
-			this.db.deal.groupBy({
+			this.db.matter.groupBy({
 				by: ["currency"],
 				where: { amount: { not: null } },
 				_count: { _all: true },
@@ -88,12 +88,12 @@ export class CurrencyService {
 					return {
 						currency,
 						name: currencyName(currency),
-						deals: row._count._all,
+						matters: row._count._all,
 						convertible: convertible.has(currency),
 					};
 				})
 				.sort(
-					(a, b) => b.deals - a.deals || a.currency.localeCompare(b.currency),
+					(a, b) => b.matters - a.matters || a.currency.localeCompare(b.currency),
 				),
 			unconverted,
 			catalog: [...CURRENCIES],
