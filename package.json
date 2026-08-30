@@ -5,6 +5,7 @@
 	"version": "1.15.3",
 	"scripts": {
 		"prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+		"start": "echo 'Set a per-service Start Command in Railway' && exit 1",
 		"build": "turbo run build",
 		"dev": "turbo run dev",
 		"lint": "turbo run lint",
