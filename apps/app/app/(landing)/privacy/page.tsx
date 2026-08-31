@@ -27,12 +27,33 @@ export default function PrivacyPolicy() {
 				<p className="text-muted-foreground text-sm">Last updated: —</p>
 
 				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Scope</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						This policy covers the clients and other contacts whose data your
+						firm keeps in this CRM. It does not cover your firm's own staff — an
+						internal or employee privacy notice covers what this CRM knows about
+						the people who work at your firm.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
 					<h2 className="font-medium text-lg">What this CRM stores</h2>
 					<p className="text-[15px] text-muted-foreground leading-6">
 						This CRM stores the records your firm creates in it — contacts,
 						companies, matters, the documents and notes attached to them, and
 						the correspondence your firm connects (email, calendar, Slack) so it
 						can be found alongside those records.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Why we process this data</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						Placeholder — name the legal basis that applies: performing the
+						engagement your firm was retained for (contract), a legitimate
+						interest in managing the matter and the client relationship, or
+						consent, where your firm relies on it. State which basis applies to
+						which category of data before publishing this policy.
 					</p>
 				</section>
 
@@ -60,11 +81,62 @@ export default function PrivacyPolicy() {
 				</section>
 
 				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">International transfers</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						Placeholder — name the region this CRM and its connected
+						integrations process data in, and, if that differs from where your
+						clients are located, the safeguard your firm relies on for the
+						transfer (for example standard contractual clauses).
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Cookies</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						If your firm installs the tracking snippet on its own website, it
+						sets a first-party cookie to recognize a returning visitor and
+						attribute their enquiry to how they found your site. It does not
+						read cookies set by other sites, and it is off unless your firm adds
+						it in Settings → Tracking.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
 					<h2 className="font-medium text-lg">How long data is kept</h2>
 					<p className="text-[15px] text-muted-foreground leading-6">
 						Records are kept until your firm deletes them or archives the
 						matter. Your firm's administrator controls retention settings for
 						connected mailboxes and tracked website activity in Settings.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Your rights</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						Placeholder — describe how a client or contact can ask to see,
+						correct, or have their data deleted: contact your instructing
+						solicitor, who can act on the request from inside the CRM. Name any
+						response timeframe your firm commits to.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Security</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						Data is encrypted in transit, access is restricted to signed-in
+						members of your firm's workspace, and security-relevant events
+						(failed sign-ins, denied access) are logged. No security measure is
+						perfect — describe your firm's own incident response process here.
+					</p>
+				</section>
+
+				<section className="flex flex-col gap-2">
+					<h2 className="font-medium text-lg">Changes to this policy</h2>
+					<p className="text-[15px] text-muted-foreground leading-6">
+						Your firm may update this policy as its practices change. Material
+						changes will be reflected in the "Last updated" date above —
+						describe here how your firm will notify clients of a material
+						change, if it commits to doing so.
 					</p>
 				</section>
 
