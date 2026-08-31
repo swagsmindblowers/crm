@@ -7,6 +7,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { readClientSession } from "@/lib/client-portal-session";
 import { listPortalMatters } from "@/lib/portal-matters";
 import { PortalHeader } from "./portal-header";
@@ -16,7 +17,15 @@ export const metadata: Metadata = {
 	title: "Your matters",
 };
 
-export default async function PortalDashboardPage() {
+export default function PortalDashboardPage() {
+	return (
+		<Suspense fallback={null}>
+			<Dashboard />
+		</Suspense>
+	);
+}
+
+async function Dashboard() {
 	const session = await readClientSession();
 	if (!session) redirect("/portal/sign-in");
 
