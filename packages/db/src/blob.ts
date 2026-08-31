@@ -80,7 +80,8 @@ export async function uploadDocument(
 		});
 
 		return { ok: true, url: blob.url, byteSize: bytes.byteLength };
-	} catch {
+	} catch (error) {
+		console.error("uploadDocument: storing the file failed", error);
 		return {
 			ok: false,
 			code: "storage-failed",
