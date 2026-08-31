@@ -7,3 +7,10 @@ export const API_KEY_EXPIRATION = {
 	minDays: 1,
 	maxDays: 365,
 } as const;
+
+const HOUR_MS = 60 * 60 * 1_000;
+
+export const API_KEY_RATE_LIMIT = {
+	windowMs: HOUR_MS,
+	maxRequests: 1_000,
+} as const;

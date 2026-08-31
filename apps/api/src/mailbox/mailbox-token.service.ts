@@ -80,6 +80,13 @@ export class MailboxTokenService {
 			};
 		}
 
+		return this.accessTokenForUser(userId, providerId);
+	}
+
+	async accessTokenForUser(
+		userId: string,
+		providerId: MailboxProviderId,
+	): Promise<TokenResult> {
 		try {
 			const { accessToken } = await auth.api.getAccessToken({
 				body: { providerId, userId },
@@ -98,7 +105,6 @@ export class MailboxTokenService {
 				message: "Mailbox token refresh failed",
 				userId,
 				providerId,
-				source,
 				reason: error instanceof Error ? error.message : String(error),
 			});
 

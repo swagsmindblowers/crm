@@ -3,6 +3,7 @@
 import Add from "@carbon/icons-react/es/Add";
 import Close from "@carbon/icons-react/es/Close";
 import DocumentBlank from "@carbon/icons-react/es/DocumentBlank";
+import Upload from "@carbon/icons-react/es/Upload";
 import UserMultiple from "@carbon/icons-react/es/UserMultiple";
 import WarningAlt from "@carbon/icons-react/es/WarningAlt";
 import { CURRENCIES, normalizeCurrency } from "@crm/db/currency";
@@ -31,7 +32,8 @@ import {
 	serviceDefaultFeeCents,
 	serviceLabel,
 } from "@crm/validation/matter-services";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Fragment, useRef } from "react";
 import { toast } from "sonner";
 import { AgentPanel } from "@/components/crm/agent-panel";
 import { InlineCompanyField } from "@/components/crm/company-picker";
@@ -68,6 +70,7 @@ import { savingField } from "@/lib/pending-field";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
 import type { RouterOutputs } from "@/lib/trpc/types";
+import { uploadChecklistDocument } from "@/lib/upload-checklist-document";
 import { AttachMatterContact } from "./quick-add";
 import { RecordActions } from "./record-actions";
 import { AddRow, RecordSheetFrame } from "./record-parts";
@@ -460,13 +463,39 @@ function MatterOverview({ matter }: { matter: Matter }) {
 function ConflictFlag({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
+	const queryClient = useQueryClient();
 
+	const listKey = trpc.conflictChecks.list.queryKey({ matterId });
 	const query = useQuery(trpc.conflictChecks.list.queryOptions({ matterId }));
 
 	const dismiss = useMutation(
 		trpc.conflictChecks.dismiss.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
-			onError: (error) => toast.error(error.message),
+			onMutate: async ({ id, note }) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						checks: previous.checks.map((check) =>
+							check.id === id
+								? {
+										...check,
+										status: "DISMISSED" as const,
+										dismissedAt: new Date().toISOString(),
+										dismissedNote: note,
+									}
+								: check,
+						),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
 		}),
 	);
 
@@ -616,9 +645,10 @@ function MatterKeyDates({
 
 const DOCUMENT_COLUMNS = [
 	{ id: "done", srLabel: "Received", width: "w-10", className: "pl-5" },
-	{ id: "label", header: "Document", width: "w-[44%]" },
-	{ id: "status", header: "Status", width: "w-[22%]" },
-	{ id: "received", header: "Received", width: "w-[22%]" },
+	{ id: "label", header: "Document", width: "w-[38%]" },
+	{ id: "status", header: "Status", width: "w-[20%]" },
+	{ id: "received", header: "Received", width: "w-[20%]" },
+	{ id: "upload", srLabel: "Upload", width: "w-10" },
 	{ id: "remove", srLabel: "Remove", width: "w-10" },
 ];
 
@@ -628,18 +658,54 @@ const DOCUMENT_STATUS_LABEL = {
 	NOT_APPLICABLE: "Not applicable",
 } as const;
 
+const UPLOAD_REVIEW_LABEL = {
+	PENDING_REVIEW: "Pending review",
+	ACCEPTED: "Accepted",
+	REJECTED: "Rejected",
+} as const;
+
 function MatterDocuments({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
+	const queryClient = useQueryClient();
 
+	const listKey = trpc.documentChecklist.list.queryKey({ matterId });
 	const query = useQuery(
 		trpc.documentChecklist.list.queryOptions({ matterId }),
 	);
 
 	const update = useMutation(
 		trpc.documentChecklist.update.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
-			onError: (error) => toast.error(error.message),
+			onMutate: async (input) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						items: previous.items.map((item) =>
+							item.id === input.id
+								? {
+										...item,
+										...input,
+										receivedAt:
+											input.status === "RECEIVED"
+												? new Date().toISOString()
+												: input.status
+													? null
+													: item.receivedAt,
+									}
+								: item,
+						),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
 		}),
 	);
 
@@ -652,7 +718,29 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 
 	const remove = useMutation(
 		trpc.documentChecklist.remove.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
+			onMutate: async (input) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						items: previous.items.filter((item) => item.id !== input.id),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
+		}),
+	);
+
+	const reviewUpload = useMutation(
+		trpc.documentChecklist.reviewUpload.mutationOptions({
+			onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey }),
 			onError: (error) => toast.error(error.message),
 		}),
 	);
@@ -685,77 +773,155 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 	return (
 		<SimpleTable variant="panel" columns={DOCUMENT_COLUMNS}>
 			{items.map((item) => (
-				<SimpleTableRow key={item.id}>
-					<TableCell className="py-2.5 pr-1 pl-5">
-						<Checkbox
-							checked={item.status === "RECEIVED"}
-							disabled={update.isPending}
-							onCheckedChange={(checked) =>
-								update.mutate({
-									id: item.id,
-									matterId,
-									status: checked ? "RECEIVED" : "OUTSTANDING",
-								})
-							}
-							aria-label={`Mark ${item.label} as received`}
-						/>
-					</TableCell>
-					<TableCell className="truncate px-3 py-2.5 font-medium">
-						<span
-							className={
-								item.status === "NOT_APPLICABLE"
-									? "text-muted-foreground line-through"
-									: undefined
-							}
-						>
-							{item.label}
-							{item.required ? null : (
-								<span className="text-muted-foreground"> (optional)</span>
-							)}
-						</span>
-						{item.description ? (
-							<span className="block truncate text-muted-foreground text-xs">
-								{item.description}
+				<Fragment key={item.id}>
+					<SimpleTableRow>
+						<TableCell className="py-2.5 pr-1 pl-5">
+							<Checkbox
+								checked={item.status === "RECEIVED"}
+								disabled={update.isPending}
+								onCheckedChange={(checked) =>
+									update.mutate({
+										id: item.id,
+										matterId,
+										status: checked ? "RECEIVED" : "OUTSTANDING",
+									})
+								}
+								aria-label={`Mark ${item.label} as received`}
+							/>
+						</TableCell>
+						<TableCell className="truncate px-3 py-2.5 font-medium">
+							<span
+								className={
+									item.status === "NOT_APPLICABLE"
+										? "text-muted-foreground line-through"
+										: undefined
+								}
+							>
+								{item.label}
+								{item.required ? null : (
+									<span className="text-muted-foreground"> (optional)</span>
+								)}
 							</span>
-						) : null}
-					</TableCell>
-					<TableCell className="truncate px-3 py-2.5">
-						<button
-							type="button"
-							className="text-muted-foreground underline-offset-2 hover:underline"
-							onClick={() =>
-								update.mutate({
-									id: item.id,
-									matterId,
-									status:
-										item.status === "NOT_APPLICABLE"
-											? "OUTSTANDING"
-											: "NOT_APPLICABLE",
-								})
-							}
-						>
-							{DOCUMENT_STATUS_LABEL[item.status]}
-						</button>
-					</TableCell>
-					<TableCell className="truncate px-3 py-2.5 text-muted-foreground">
-						{item.receivedAt ? (
-							<LocalDateTime date={item.receivedAt} options={DATE_OPTIONS} />
-						) : (
-							<EmptyCellValue />
-						)}
-					</TableCell>
-					<TableCell className="px-3 py-2.5">
-						<Button
-							variant="ghost"
-							size="icon-xs"
-							disabled={remove.isPending}
-							onClick={() => remove.mutate({ id: item.id, matterId })}
-						>
-							<Icon icon={Close} />
-							<span className="sr-only">Remove {item.label}</span>
-						</Button>
-					</TableCell>
-				</SimpleTableRow>
+							{item.description ? (
+								<span className="block truncate text-muted-foreground text-xs">
+									{item.description}
+								</span>
+							) : null}
+						</TableCell>
+						<TableCell className="truncate px-3 py-2.5">
+							<button
+								type="button"
+								className="text-muted-foreground underline-offset-2 hover:underline"
+								onClick={() =>
+									update.mutate({
+										id: item.id,
+										matterId,
+										status:
+											item.status === "NOT_APPLICABLE"
+												? "OUTSTANDING"
+												: "NOT_APPLICABLE",
+									})
+								}
+							>
+								{DOCUMENT_STATUS_LABEL[item.status]}
+							</button>
+						</TableCell>
+						<TableCell className="truncate px-3 py-2.5 text-muted-foreground">
+							{item.receivedAt ? (
+								<LocalDateTime date={item.receivedAt} options={DATE_OPTIONS} />
+							) : (
+								<EmptyCellValue />
+							)}
+						</TableCell>
+						<TableCell className="px-1 py-2.5 text-center">
+							<ChecklistUploadButton
+								matterId={matterId}
+								checklistItemId={item.id}
+								onUploaded={() =>
+									queryClient.invalidateQueries({ queryKey: listKey })
+								}
+							/>
+						</TableCell>
+						<TableCell className="px-1 py-2.5 text-center">
+							<Button
+								variant="ghost"
+								size="icon-xs"
+								disabled={remove.isPending}
+								onClick={() => remove.mutate({ id: item.id, matterId })}
+							>
+								<Icon icon={Close} />
+								<span className="sr-only">Remove {item.label}</span>
+							</Button>
+						</TableCell>
+					</SimpleTableRow>
+					{item.uploads.length > 0 ? (
+						<SimpleTableRow>
+							<TableCell
+								colSpan={DOCUMENT_COLUMNS.length}
+								className="px-5 py-2"
+							>
+								<ul className="flex flex-col gap-1.5">
+									{item.uploads.map((upload) => (
+										<li
+											key={upload.id}
+											className="flex items-center justify-between gap-3 text-xs"
+										>
+											<a
+												href={upload.url}
+												target="_blank"
+												rel="noreferrer"
+												className="truncate text-foreground underline-offset-2 hover:underline"
+											>
+												{upload.filename}
+											</a>
+											<span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+												{UPLOAD_REVIEW_LABEL[upload.reviewStatus]}
+												{upload.reviewStatus === "PENDING_REVIEW" ? (
+													<>
+														<button
+															type="button"
+															className="text-foreground underline-offset-2 hover:underline"
+															disabled={reviewUpload.isPending}
+															onClick={() =>
+																reviewUpload.mutate({
+																	id: upload.id,
+																	matterId,
+																	decision: "ACCEPTED",
+																})
+															}
+														>
+															Accept
+														</button>
+														<button
+															type="button"
+															className="text-foreground underline-offset-2 hover:underline"
+															disabled={reviewUpload.isPending}
+															onClick={() => {
+																const note = window.prompt(
+																	"Why is this rejected? The note goes on the record.",
+																);
+																if (note?.trim()) {
+																	reviewUpload.mutate({
+																		id: upload.id,
+																		matterId,
+																		decision: "REJECTED",
+																		note,
+																	});
+																}
+															}}
+														>
+															Reject
+														</button>
+													</>
+												) : null}
+											</span>
+										</li>
+									))}
+								</ul>
+							</TableCell>
+						</SimpleTableRow>
+					) : null}
+				</Fragment>
 			))}
 
 			<AddRow
@@ -767,6 +933,53 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 				}}
 			/>
 		</SimpleTable>
+	);
+}
+
+function ChecklistUploadButton({
+	matterId,
+	checklistItemId,
+	onUploaded,
+}: {
+	matterId: string;
+	checklistItemId: string;
+	onUploaded: () => void;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	return (
+		<>
+			<input
+				ref={inputRef}
+				type="file"
+				accept=".pdf,.jpg,.jpeg,.png,.docx"
+				className="hidden"
+				onChange={async (event) => {
+					const file = event.target.files?.[0];
+					event.target.value = "";
+					if (!file) return;
+
+					const result = await uploadChecklistDocument(
+						matterId,
+						checklistItemId,
+						file,
+					);
+					if (result.ok) {
+						onUploaded();
+					} else {
+						toast.error(result.reason);
+					}
+				}}
+			/>
+			<Button
+				variant="ghost"
+				size="icon-xs"
+				onClick={() => inputRef.current?.click()}
+			>
+				<Icon icon={Upload} />
+				<span className="sr-only">Upload a document</span>
+			</Button>
+		</>
 	);
 }
 

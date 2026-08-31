@@ -1,3 +1,9 @@
+import {
+	GOOGLE_PROVIDER_ID,
+	hasSendScope,
+	isMailboxProvider,
+	MICROSOFT_PROVIDER_ID,
+} from "@crm/auth";
 import type { Db } from "@crm/db";
 import {
 	DEFAULT_AGENT_MODEL,
@@ -5,9 +11,11 @@ import {
 	readAgentModel,
 	readArchiveRetentionDays,
 	readContextDevKey,
+	readPortalSenderAccountId,
 	writeAgentModel,
 	writeArchiveRetentionDays,
 	writeContextDevKey,
+	writePortalSenderAccountId,
 } from "@crm/db/settings";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ResearchKeyService } from "../agent/research-key.service";
@@ -18,6 +26,8 @@ import type {
 	AgentModelSettings,
 	ArchiveRetentionSettings,
 	ModelCatalogResult,
+	PortalSenderCandidate,
+	PortalSenderSettings,
 	ResearchKeySettings,
 } from "./settings.contracts";
 
@@ -143,5 +153,60 @@ export class SettingsService {
 		});
 
 		return { days: saved };
+	}
+
+	async portalSender(): Promise<PortalSenderSettings> {
+		const [selectedId, accounts] = await Promise.all([
+			readPortalSenderAccountId(this.db),
+			this.db.account.findMany({
+				where: {
+					providerId: { in: [GOOGLE_PROVIDER_ID, MICROSOFT_PROVIDER_ID] },
+				},
+				select: {
+					id: true,
+					providerId: true,
+					scope: true,
+					user: { select: { email: true } },
+				},
+			}),
+		]);
+
+		const candidates: PortalSenderCandidate[] = accounts
+			.filter((account) => isMailboxProvider(account.providerId))
+			.map((account) => ({
+				accountId: account.id,
+				providerId: account.providerId as "google" | "microsoft",
+				email: account.user.email,
+				canSend: hasSendScope(account.providerId, account.scope),
+			}));
+
+		const selected = candidates.find((c) => c.accountId === selectedId) ?? null;
+
+		return { selected, candidates };
+	}
+
+	async setPortalSender(
+		accountId: string | null,
+	): Promise<PortalSenderSettings> {
+		if (accountId) {
+			const account = await this.db.account.findUnique({
+				where: { id: accountId },
+				select: { providerId: true, scope: true },
+			});
+			if (!account || !hasSendScope(account.providerId, account.scope)) {
+				throw new BadRequestException(
+					"That account has not granted send permission yet.",
+				);
+			}
+		}
+
+		await writePortalSenderAccountId(this.db, accountId);
+
+		this.logger.log({
+			message: "Portal sender account changed",
+			accountId,
+		});
+
+		return this.portalSender();
 	}
 }

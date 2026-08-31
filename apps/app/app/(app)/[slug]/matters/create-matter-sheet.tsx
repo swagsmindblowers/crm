@@ -78,7 +78,9 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 	const [company, setCompany] = useState(companyId ?? UNSET);
 	const [ownerId, setOwnerId] = useState(UNSET);
 	const [stage, setStage] = useState<string>("ENQUIRY");
-	const [serviceType, setServiceType] = useState<MatterServiceId>("OTHER");
+	const [serviceType, setServiceType] = useState<
+		MatterServiceId | typeof UNSET
+	>(UNSET);
 	const [amount, setAmount] = useState("");
 	const [currency, setCurrency] = useState("");
 	const [closeDate, setCloseDate] = useState("");
@@ -112,7 +114,10 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 	);
 
 	const ready =
-		name.trim() !== "" && company !== UNSET && resolvedOwner !== UNSET;
+		name.trim() !== "" &&
+		company !== UNSET &&
+		resolvedOwner !== UNSET &&
+		serviceType !== UNSET;
 
 	return (
 		<Sheet open={open} onOpenChange={(next) => setOpen(next || null)}>
@@ -132,6 +137,7 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 					className="flex-1 overflow-y-auto px-4"
 					onSubmit={(event) => {
 						event.preventDefault();
+						if (serviceType === UNSET) return;
 						const parsed = Number.parseFloat(amount);
 						create.mutate({
 							name,
@@ -218,7 +224,7 @@ function CreateMatterForm({ companyId }: { companyId?: string }) {
 								}}
 							>
 								<SelectTrigger id="create-matter-service">
-									<SelectValue />
+									<SelectValue placeholder="Choose a service" />
 								</SelectTrigger>
 								<SelectContent>
 									{MATTER_SERVICES.map((service) => (

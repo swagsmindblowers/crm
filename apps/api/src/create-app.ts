@@ -6,6 +6,7 @@ import {
 	type NestExpressApplication,
 } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import compression from "compression";
 import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { AppRouterHost } from "nestjs-trpc";
@@ -15,6 +16,7 @@ import {
 } from "trpc-to-openapi";
 import { AppModule } from "./app.module";
 import { ContextLogger } from "./logging/context-logger";
+import { maintenanceMode } from "./maintenance-mode";
 import { REST_BRIDGE_PATH } from "./trpc/openapi";
 import { createBaseTrpcContext } from "./trpc/trpc.context";
 
@@ -26,6 +28,8 @@ export async function createApp(): Promise<NestExpressApplication> {
 	);
 
 	app.use(helmet());
+	app.use(compression());
+	app.use(maintenanceMode);
 	app.useGlobalPipes(
 		new ValidationPipe({
 			whitelist: true,

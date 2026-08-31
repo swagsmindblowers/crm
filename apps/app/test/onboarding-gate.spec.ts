@@ -292,6 +292,14 @@ describe("proxy", () => {
 		).toBeNull();
 	});
 
+	it("never routes the client portal through the staff gates", async () => {
+		const calls = setup({ onboarded: false, configured: false });
+
+		expect(redirectedTo(await proxy(request("/portal")))).toBeNull();
+		expect(redirectedTo(await proxy(request("/portal/sign-in")))).toBeNull();
+		expect(calls).toEqual({ workspace: 0, research: 0 });
+	});
+
 	it("fails open when the API is unreachable", async () => {
 		stub(async () => {
 			throw new Error("connect ECONNREFUSED");

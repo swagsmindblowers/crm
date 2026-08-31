@@ -1,6 +1,14 @@
 import { Inject } from "@nestjs/common";
-import { Input, Mutation, Query, Router, UseMiddlewares } from "nestjs-trpc";
+import {
+	Ctx,
+	Input,
+	Mutation,
+	Query,
+	Router,
+	UseMiddlewares,
+} from "nestjs-trpc";
 import type { z } from "zod";
+import type { AuthedTrpcContext } from "../trpc/context.types";
 import { AuthMiddleware } from "../trpc/middlewares/auth.middleware";
 import { restMeta } from "../trpc/openapi";
 import {
@@ -11,6 +19,8 @@ import {
 	checklistRemovedOutput,
 	checklistRemoveInput,
 	checklistUpdateInput,
+	checklistUploadOutput,
+	checklistUploadReviewInput,
 } from "./document-checklist.contracts";
 import { DocumentChecklistService } from "./document-checklist.service";
 
@@ -56,5 +66,21 @@ export class DocumentChecklistRouter {
 	})
 	async remove(@Input() input: z.infer<typeof checklistRemoveInput>) {
 		return this.checklist.remove(input);
+	}
+
+	@Mutation({
+		input: checklistUploadReviewInput,
+		output: checklistUploadOutput,
+		meta: restMeta(
+			"POST",
+			"/matters/{matterId}/documents/uploads/{id}/review",
+			["Matters"],
+		),
+	})
+	async reviewUpload(
+		@Input() input: z.infer<typeof checklistUploadReviewInput>,
+		@Ctx() ctx: AuthedTrpcContext,
+	) {
+		return this.checklist.reviewUpload(input, ctx.user.id);
 	}
 }

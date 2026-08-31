@@ -144,6 +144,15 @@ export async function noteSession(
 	});
 }
 
+export async function budgetStartedSince(since: Date): Promise<number> {
+	const result = await db.agentTask.aggregate({
+		where: { startedAt: { gte: since } },
+		_sum: { budget: true },
+	});
+
+	return result._sum.budget ?? 0;
+}
+
 export async function scheduleTask(input: {
 	contactId?: string | null;
 	companyId?: string | null;

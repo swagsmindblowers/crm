@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { requireSession } from "@/lib/session";
 import { getServerQueryClient, getServerTrpc } from "@/lib/trpc/server";
 import { AddConnectionDialog } from "./add-connection-dialog";
+import { PortalSenderSection } from "./portal-sender-section";
 
 export const metadata: Metadata = { title: "Connections" };
 
@@ -101,6 +102,7 @@ async function ConnectionsSettingsPageContent({
 							<ConnectionCard key={row.name} {...row} />
 						))}
 					</div>
+					<PortalSenderSection />
 				</div>
 			) : (
 				<div className="mx-auto flex w-full max-w-(--container-narrow) flex-1 flex-col justify-center gap-(--spacing-page-gap) text-center">

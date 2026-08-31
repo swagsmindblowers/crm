@@ -81,3 +81,25 @@ export const setArchiveRetentionDaysInput = z.object({
 export type SetArchiveRetentionDaysInput = z.infer<
 	typeof setArchiveRetentionDaysInput
 >;
+
+export const portalSenderCandidateOutput = z.object({
+	accountId: z.string(),
+	providerId: z.enum(["google", "microsoft"]),
+	email: z.string(),
+	canSend: z.boolean(),
+});
+
+export type PortalSenderCandidate = z.infer<typeof portalSenderCandidateOutput>;
+
+export const portalSenderOutput = z.object({
+	selected: portalSenderCandidateOutput.nullable(),
+	candidates: z.array(portalSenderCandidateOutput),
+});
+
+export type PortalSenderSettings = z.infer<typeof portalSenderOutput>;
+
+export const setPortalSenderInput = z.object({
+	accountId: z.string().nullable(),
+});
+
+export type SetPortalSenderInput = z.infer<typeof setPortalSenderInput>;

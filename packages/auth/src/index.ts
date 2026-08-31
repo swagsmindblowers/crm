@@ -5,12 +5,18 @@ export {
 	DAY_SECONDS,
 } from "./api-keys";
 export { type Auth, auth, type Session, type SessionUser } from "./auth";
-export { AUTH_COOKIE_PREFIX, SESSION_COOKIE_NAME } from "./cookies";
+export {
+	AUTH_COOKIE_PREFIX,
+	CLIENT_SESSION_COOKIE_NAME,
+	SESSION_COOKIE_NAME,
+} from "./cookies";
 export {
 	apiUrl,
 	appUrl,
+	cookieDomain,
 	isGoogleConfigured,
 	isMicrosoftConfigured,
+	isProduction,
 	isSlackConfigured,
 } from "./env";
 export {
@@ -32,7 +38,9 @@ export {
 export {
 	CALENDAR_SCOPE,
 	GMAIL_SCOPE,
+	GMAIL_SEND_SCOPE,
 	GOOGLE_PROVIDER_ID,
+	hasSendScope,
 	hasSyncScopes,
 	IDENTITY_SCOPES,
 	isMailboxProvider,
@@ -43,8 +51,10 @@ export {
 	mailboxGrantsNeeded,
 	needsMailboxGrant,
 	OUTLOOK_MAIL_SCOPE,
+	OUTLOOK_MAIL_SEND_SCOPE,
 	parseScopes,
 	REQUIRED_SCOPES,
+	SEND_SCOPE_FOR,
 	type SignInAccount,
 	SYNC_SCOPES,
 	SYNC_SCOPES_FOR,

@@ -20,6 +20,75 @@ const ALLOWED: ExtensionByMediaType = {
 	"image/vnd.microsoft.icon": "ico",
 };
 
+export const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+
+const DOCUMENT_ALLOWED: ExtensionByMediaType = {
+	"application/pdf": "pdf",
+	"image/jpeg": "jpg",
+	"image/png": "png",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		"docx",
+};
+
+export type DocumentUploadResult =
+	| { ok: true; url: string; byteSize: number }
+	| {
+			ok: false;
+			code: "not-configured" | "invalid-input" | "storage-failed";
+			reason: string;
+	  };
+
+export async function uploadDocument(
+	bytes: Buffer,
+	options: { prefix: string; contentType: string },
+): Promise<DocumentUploadResult> {
+	if (!blobEnabled()) {
+		return {
+			ok: false,
+			code: "not-configured",
+			reason: "Document storage is not configured.",
+		};
+	}
+
+	const extension = DOCUMENT_ALLOWED[options.contentType.toLowerCase()];
+	if (!extension) {
+		return {
+			ok: false,
+			code: "invalid-input",
+			reason: `${options.contentType} is not an accepted file type. Upload a PDF, JPG, PNG or DOCX.`,
+		};
+	}
+
+	if (bytes.byteLength === 0 || bytes.byteLength > DOCUMENT_MAX_BYTES) {
+		return {
+			ok: false,
+			code: "invalid-input",
+			reason: "The file must be under 10MB.",
+		};
+	}
+
+	const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+
+	try {
+		const { put } = await import("@vercel/blob");
+
+		const blob = await put(`${options.prefix}-${digest}.${extension}`, bytes, {
+			access: "public",
+			contentType: options.contentType,
+			addRandomSuffix: false,
+			allowOverwrite: true,
+		});
+
+		return { ok: true, url: blob.url, byteSize: bytes.byteLength };
+	} catch {
+		return {
+			ok: false,
+			code: "storage-failed",
+			reason: "Could not store the file. Try again.",
+		};
+	}
+}
+
 export function blobEnabled(): boolean {
 	return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }

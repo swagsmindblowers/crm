@@ -99,4 +99,17 @@ export class GraphClient {
 	): Promise<MailboxResult<MessagePage>> {
 		return this.api.get<MessagePage>(nextLink, accessToken);
 	}
+
+	async sendMail(
+		accessToken: string,
+		message: { to: string; subject: string; text: string },
+	): Promise<MailboxResult<undefined>> {
+		return this.api.post<undefined>(`${BASE}/sendMail`, accessToken, {
+			message: {
+				subject: message.subject,
+				body: { contentType: "Text", content: message.text },
+				toRecipients: [{ emailAddress: { address: message.to } }],
+			},
+		});
+	}
 }

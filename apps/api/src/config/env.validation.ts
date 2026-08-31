@@ -133,6 +133,14 @@ export class EnvironmentVariables {
 	@IsOptional()
 	@IsString()
 	CRM_TELEMETRY_DISABLED?: string;
+
+	@IsOptional()
+	@IsString()
+	MAINTENANCE_MODE?: string;
+
+	@IsOptional()
+	@IsUrl({ require_tld: false })
+	SENTRY_DSN?: string;
 }
 
 export type RawEnvironment = Record<string, string | undefined>;

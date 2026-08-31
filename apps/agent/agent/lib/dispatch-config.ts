@@ -45,4 +45,8 @@ export const DISPATCH = {
 		maxAbandoned: 1,
 		abandonGraceMs: 15 * MINUTE_MS,
 	},
+
+	usage: {
+		dailyTaskBudgetCap: 500,
+	},
 } as const;

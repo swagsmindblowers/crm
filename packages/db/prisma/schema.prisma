@@ -50,6 +50,9 @@ model User {
 
   apiKeys Apikey[]
 
+  uploadedChecklistDocuments ChecklistDocumentUpload[] @relation("ChecklistUploadUploader")
+  reviewedChecklistDocuments ChecklistDocumentUpload[] @relation("ChecklistUploadReviewer")
+
   @@unique([email])
   @@map("user")
 }
@@ -214,6 +217,12 @@ enum DocumentChecklistStatus {
   OUTSTANDING
   RECEIVED
   NOT_APPLICABLE
+}
+
+enum DocumentUploadReviewStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
 }
 
 enum ConflictCheckStatus {
@@ -425,9 +434,12 @@ model Contact {
 
   source RecordSource @default(MANUAL)
 
+  isCompanyAdmin Boolean @default(false)
+
   lastActivityAt DateTime?
   archivedAt     DateTime?
 
+  clientAccount   ClientAccount?
   matters         MatterContact[]
   activities      Activity[]
   emailThreads    EmailThread[]
@@ -1052,8 +1064,84 @@ model DocumentChecklistItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  uploads ChecklistDocumentUpload[]
+
   @@index([matterId, position])
   @@map("documentChecklistItem")
+}
+
+model ChecklistDocumentUpload {
+  id              String                @id @default(cuid())
+  checklistItemId String
+  checklistItem   DocumentChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+
+  blobUrl     String
+  filename    String
+  contentType String
+  byteSize    Int
+
+  uploadedByUserId String?
+  uploadedByUser   User?   @relation("ChecklistUploadUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  uploadedByClientAccountId String?
+  uploadedByClientAccount   ClientAccount? @relation(fields: [uploadedByClientAccountId], references: [id], onDelete: SetNull)
+
+  reviewStatus DocumentUploadReviewStatus @default(PENDING_REVIEW)
+  reviewNote   String?
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?                      @relation("ChecklistUploadReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([checklistItemId, createdAt])
+  @@map("checklistDocumentUpload")
+}
+
+model ClientAccount {
+  id        String  @id @default(cuid())
+  contactId String  @unique
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  email     String  @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loginTokens ClientLoginToken[]
+  sessions    ClientSession[]
+  uploads     ChecklistDocumentUpload[]
+
+  @@map("clientAccount")
+}
+
+model ClientLoginToken {
+  id              String        @id @default(cuid())
+  clientAccountId String
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientAccountId])
+  @@map("clientLoginToken")
+}
+
+model ClientSession {
+  id              String        @id @default(cuid())
+  clientAccountId String
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([clientAccountId])
+  @@map("clientSession")
 }
 
 model ConflictCheck {
@@ -1431,6 +1519,8 @@ model AppSetting {
   reportingCurrency String?
 
   ratesRefreshedAt DateTime?
+
+  portalSenderAccountId String?
 
   archiveRetentionDays Int @default(180)
 

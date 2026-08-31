@@ -8,6 +8,7 @@ import {
 	Logger,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { reportError } from "./error-monitoring";
 import { getRequestContext } from "./request-context";
 
 @Catch()
@@ -54,6 +55,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
 			);
 
 			apiError({ error: exception, route: routePattern(request), status });
+			reportError(exception);
+			return;
+		}
+
+		if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+			this.logger.warn({ ...payload, event: "security", ip: request.ip });
 			return;
 		}
 
