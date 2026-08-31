@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { readClientSession } from "@/lib/client-portal-session";
 import { getPortalMatter } from "@/lib/portal-matters";
 import { PortalHeader } from "../../portal-header";
 import { PortalStatusBadge } from "../../portal-status-badge";
 import { PortalChecklist } from "./portal-checklist";
 
-export async function generateMetadata({
-	params,
-}: PageProps<"/portal/matters/[matterId]">): Promise<Metadata> {
-	const { matterId } = await params;
-	const matter = await getPortalMatter(matterId);
-	return { title: matter?.name ?? "Matter" };
-}
+export const metadata: Metadata = {
+	title: "Matter details",
+};
 
-export default async function PortalMatterPage({
+export default function PortalMatterPage({
 	params,
 }: PageProps<"/portal/matters/[matterId]">) {
+	return (
+		<Suspense fallback={null}>
+			<MatterDetail params={params} />
+		</Suspense>
+	);
+}
+
+async function MatterDetail({
+	params,
+}: Pick<PageProps<"/portal/matters/[matterId]">, "params">) {
 	const session = await readClientSession();
 	if (!session) redirect("/portal/sign-in");
 
