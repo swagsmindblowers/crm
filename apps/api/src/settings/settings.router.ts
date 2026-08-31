@@ -7,9 +7,11 @@ import {
 	agentModelOutput,
 	archiveRetentionOutput,
 	modelCatalogOutput,
+	portalSenderOutput,
 	researchKeyOutput,
 	setAgentModelInput,
 	setArchiveRetentionDaysInput,
+	setPortalSenderInput,
 	setResearchKeyInput,
 } from "./settings.contracts";
 import { SettingsService } from "./settings.service";
@@ -80,5 +82,22 @@ export class SettingsRouter {
 		@Input() input: z.infer<typeof setArchiveRetentionDaysInput>,
 	) {
 		return this.settings.setArchiveRetention(input.days);
+	}
+
+	@Query({
+		output: portalSenderOutput,
+		meta: restMeta("GET", "/settings/portal-sender", ["Settings"]),
+	})
+	async portalSender() {
+		return this.settings.portalSender();
+	}
+
+	@Mutation({
+		input: setPortalSenderInput,
+		output: portalSenderOutput,
+		meta: restMeta("PATCH", "/settings/portal-sender", ["Settings"]),
+	})
+	async setPortalSender(@Input() input: z.infer<typeof setPortalSenderInput>) {
+		return this.settings.setPortalSender(input.accountId);
 	}
 }

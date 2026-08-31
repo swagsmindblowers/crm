@@ -11,6 +11,7 @@ import { ArchiveModule } from "./archive/archive.module";
 import { AuthModule } from "./auth/auth.module";
 import { BackfillModule } from "./backfill/backfill.module";
 import { AppCacheModule } from "./cache/cache.module";
+import { ClientPortalModule } from "./client-portal/client-portal.module";
 import { CompaniesModule } from "./companies/companies.module";
 import { validateEnv } from "./config/env.validation";
 import { ConflictChecksModule } from "./conflict-checks/conflict-checks.module";
@@ -71,6 +72,7 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		UsersModule,
 		ApiKeysModule,
 		CompaniesModule,
+		ClientPortalModule,
 		ContactsModule,
 		ConversationsModule,
 		CurrencyModule,

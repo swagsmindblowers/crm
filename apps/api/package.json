@@ -46,6 +46,7 @@
 		"class-validator": "^0.15.1",
 		"compression": "^1.8.1",
 		"context.dev": "^2.7.0",
+		"cookie": "^2.0.1",
 		"helmet": "^8.3.0",
 		"multer": "^2.3.0",
 		"nestjs-trpc": "^2.13.0",

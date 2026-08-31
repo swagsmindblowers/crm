@@ -439,6 +439,7 @@ model Contact {
   lastActivityAt DateTime?
   archivedAt     DateTime?
 
+  clientAccount   ClientAccount?
   matters         MatterContact[]
   activities      Activity[]
   emailThreads    EmailThread[]
@@ -1095,6 +1096,50 @@ model ChecklistDocumentUpload {
   @@map("checklistDocumentUpload")
 }
 
+model ClientAccount {
+  id        String  @id @default(cuid())
+  contactId String  @unique
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  email     String  @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loginTokens ClientLoginToken[]
+  sessions    ClientSession[]
+
+  @@map("clientAccount")
+}
+
+model ClientLoginToken {
+  id              String        @id @default(cuid())
+  clientAccountId String
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientAccountId])
+  @@map("clientLoginToken")
+}
+
+model ClientSession {
+  id              String        @id @default(cuid())
+  clientAccountId String
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([clientAccountId])
+  @@map("clientSession")
+}
+
 model ConflictCheck {
   id String @id @default(cuid())
 
@@ -1470,6 +1515,8 @@ model AppSetting {
   reportingCurrency String?
 
   ratesRefreshedAt DateTime?
+
+  portalSenderAccountId String?
 
   archiveRetentionDays Int @default(180)
 

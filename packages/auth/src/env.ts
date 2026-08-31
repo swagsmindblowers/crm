@@ -79,4 +79,7 @@ export function isSlackConfigured(): boolean {
 	return env.slack !== undefined;
 }
 
+export const cookieDomain = env.cookieDomain;
+export const isProduction = env.isProduction;
+
 export { apiUrl, appUrl };

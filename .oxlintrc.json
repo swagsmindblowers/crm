@@ -60,7 +60,8 @@
 				"apps/app/components/crm/inline-field.tsx",
 				"apps/agent/agent/lib/error-monitoring.ts",
 				"apps/app/lib/error-monitoring.ts",
-				"apps/app/instrumentation.ts"
+				"apps/app/instrumentation.ts",
+				"apps/api/src/mailbox/mailbox-api.client.ts"
 			],
 			"rules": {
 				"anti-slop/no-unsafe-dictionary-type": "off",

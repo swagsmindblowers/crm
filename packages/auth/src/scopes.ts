@@ -16,6 +16,9 @@ export const CALENDAR_SCOPE =
 	"https://www.googleapis.com/auth/calendar.readonly";
 export const OUTLOOK_MAIL_SCOPE = "Mail.Read";
 
+export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+export const OUTLOOK_MAIL_SEND_SCOPE = "Mail.Send";
+
 export const SYNC_SCOPES = [GMAIL_SCOPE, CALENDAR_SCOPE] as const;
 export const MICROSOFT_SYNC_SCOPES = [OUTLOOK_MAIL_SCOPE] as const;
 
@@ -23,6 +26,20 @@ export const SYNC_SCOPES_FOR = {
 	[GOOGLE_PROVIDER_ID]: SYNC_SCOPES,
 	[MICROSOFT_PROVIDER_ID]: MICROSOFT_SYNC_SCOPES,
 } satisfies Record<MailboxProviderId, readonly string[]>;
+
+export const SEND_SCOPE_FOR = {
+	[GOOGLE_PROVIDER_ID]: GMAIL_SEND_SCOPE,
+	[MICROSOFT_PROVIDER_ID]: OUTLOOK_MAIL_SEND_SCOPE,
+} satisfies Record<MailboxProviderId, string>;
+
+export function hasSendScope(
+	providerId: string,
+	scope: string | null | undefined,
+): boolean {
+	if (!isMailboxProvider(providerId)) return false;
+
+	return parseScopes(scope).has(SEND_SCOPE_FOR[providerId]);
+}
 
 export const REQUIRED_SCOPES = [...IDENTITY_SCOPES, ...SYNC_SCOPES] as const;
 

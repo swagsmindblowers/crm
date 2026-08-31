@@ -121,6 +121,28 @@ export async function writeRatesRefreshedAt(
 	});
 }
 
+export async function readPortalSenderAccountId(
+	db: Db,
+): Promise<string | null> {
+	const row = await db.appSetting.findUnique({
+		where: { id: SETTINGS_ID },
+		select: { portalSenderAccountId: true },
+	});
+
+	return row?.portalSenderAccountId ?? null;
+}
+
+export async function writePortalSenderAccountId(
+	db: Db,
+	accountId: string | null,
+): Promise<void> {
+	await db.appSetting.upsert({
+		where: { id: SETTINGS_ID },
+		create: { id: SETTINGS_ID, portalSenderAccountId: accountId },
+		update: { portalSenderAccountId: accountId },
+	});
+}
+
 export const DEFAULT_ARCHIVE_RETENTION_DAYS = 180;
 
 export const MIN_ARCHIVE_RETENTION_DAYS = 1;

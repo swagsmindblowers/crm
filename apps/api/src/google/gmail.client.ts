@@ -87,4 +87,35 @@ export class GmailClient {
 			format: "full",
 		});
 	}
+
+	async sendMail(
+		accessToken: string,
+		message: { to: string; subject: string; text: string },
+	): Promise<MailboxResult<{ id?: string }>> {
+		const raw = base64UrlEncode(
+			[
+				`To: ${message.to}`,
+				`Subject: ${message.subject}`,
+				"Content-Type: text/plain; charset=UTF-8",
+				"",
+				message.text,
+			].join("\r\n"),
+		);
+
+		return this.api.post<{ id?: string }>(
+			`${BASE}/messages/send`,
+			accessToken,
+			{
+				raw,
+			},
+		);
+	}
+}
+
+function base64UrlEncode(value: string): string {
+	return Buffer.from(value, "utf8")
+		.toString("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/, "");
 }
