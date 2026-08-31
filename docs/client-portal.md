@@ -69,22 +69,28 @@ caller whether anything was sent.
 ## Status shown to a client is never the internal stage
 
 Clients must never see raw `Matter.stage` values or other internal-only
-fields. A simplified status vocabulary sits between `Matter.stage` and
-whatever the client-facing dashboard renders.
-
-**Not yet built.** No status-mapping table exists in code yet — this is
-Phase 3 work (`apps/app/app/(client)/`, or a route group under `/portal`),
-tracked separately from the auth module this doc otherwise describes.
+fields. `packages/validation/src/client-portal-status.ts` is the one place
+`MatterStage` collapses into `ClientMatterStatus` (`in_progress`,
+`submitted`, `decision_pending`, `approved`, `not_approved`, `withdrawn`)
+and its display label — imported by both
+`apps/api/src/client-portal/client-portal-matters.service.ts` (so the API
+response never carries the raw stage) and the app's status badge
+(`apps/app/app/(portal)/portal/portal-status-badge.tsx`). Never add a second
+mapping — extend `STATUS_FOR_STAGE` in that one file if a new `MatterStage`
+value needs a home.
 
 ## Visibility
+
+`ClientPortalMattersService`'s private `visibleMatterWhere(contactId)` is
+the single place this rule is expressed — both the list and the detail
+endpoint call it, so a client can never probe an arbitrary matter id
+(detail 404s exactly like "doesn't exist" for a matter that exists but
+isn't visible — never a different status, that would leak existence):
 
 - A `Contact` with `isCompanyAdmin: true` (staff sets this manually per
   contact — `contact-sheet.tsx`) sees every `Matter` under their `Company`.
 - Everyone else sees only `Matter`s where their `Contact` is attached via
   `MatterContact`.
-
-**Not yet built.** The dashboard/query that applies this rule does not
-exist yet — also Phase 3.
 
 ## Documents
 
@@ -92,12 +98,52 @@ A client uploads against a `DocumentChecklistItem` on a matter; staff
 reviews it as accepted or rejected with an optional note. This extends the
 existing checklist review flow in `apps/api/src/document-checklist`, it
 does not replace it — see `ChecklistDocumentUpload` in
-`packages/db/prisma/schema.prisma` and
-`document-checklist-upload.controller.ts`. Allowed types: PDF, JPG, PNG,
-DOCX. Cap: `DOCUMENT_MAX_BYTES` (10MB), enforced both by
-`FileInterceptor`'s `limits.fileSize` and by `uploadDocument`
-(`packages/db/src/blob.ts`).
+`packages/db/prisma/schema.prisma`. Allowed types: PDF, JPG, PNG, DOCX.
+Cap: `DOCUMENT_MAX_BYTES` (10MB), enforced both by `FileInterceptor`'s
+`limits.fileSize` and by `uploadDocument` (`packages/db/src/blob.ts`).
 
-The staff-facing upload/review UI already exists in
-`matter-sheet.tsx`'s document checklist section. A client-facing upload
-button reachable from `/portal` — **not yet built**, Phase 3.
+`DocumentChecklistService.upload()` takes a discriminated `uploadedBy:
+{kind:"staff", userId} | {kind:"client", clientAccountId}` rather than a
+bare user id, because `ChecklistDocumentUpload` has two separate nullable
+FKs — `uploadedByUserId` and `uploadedByClientAccountId` — and exactly one
+is ever set. `serializeUpload()` resolves whichever is present to a display
+name (the client's `Contact` name for a client upload), so staff never see
+a blank "uploaded by" for something a client sent in.
+
+Two parallel controllers reach the same service:
+- Staff: `document-checklist-upload.controller.ts`
+  (`POST /api/matters/:matterId/documents/:checklistItemId/uploads`,
+  better-auth staff session).
+- Client: `client-portal-documents.controller.ts`
+  (`POST /api/client-portal/matters/:matterId/documents/:checklistItemId/uploads`,
+  `ClientSessionGuard`) — calls `ClientPortalMattersService.assertVisible()`
+  before touching the checklist service, so a client can't upload against a
+  matter it can't see even if it somehow has a valid checklist-item id.
+
+## Client-facing pages (`apps/app/app/(portal)/portal/`)
+
+A route group living outside `[slug]`, since `proxy.ts` already special
+-cases `/portal` past the whole staff pipeline (see above) — every page
+here gates itself via `readClientSession()`
+(`apps/app/lib/client-portal-session.ts`), never the middleware.
+
+- `sign-in/` — email entry, posts to `/api/client-portal/request-link`.
+- `verify/` — reads `?token=`, posts to `/api/client-portal/verify` on
+  mount, redirects to `/portal` on success.
+- `page.tsx` — the dashboard: every matter `listPortalMatters()`
+  (`apps/app/lib/portal-matters.ts`) returns, each with its simplified
+  status badge; the company name only renders when more than one distinct
+  company appears in the list (an individual client with one matter, or a
+  company admin whose matters are all under their own company, never sees
+  a redundant label).
+- `matters/[matterId]/` — one matter's checklist, with a client-side
+  upload button (`portal-checklist.tsx`) posting through
+  `apps/app/lib/upload-portal-document.ts`, mirroring the staff upload
+  helper (`upload-checklist-document.ts`) but hitting the client-portal
+  endpoint.
+
+`apps/app/lib/portal-matters.ts` and `client-portal-session.ts` both parse
+every API response with Zod before trusting it — this app-side code never
+imports the API's contracts directly (separate deployables), so each side
+owns its own schema for the same wire shape and either would fail loudly on
+drift rather than passing `unknown` through.

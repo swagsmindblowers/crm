@@ -1,34 +1,43 @@
-import { type auth, SESSION_COOKIE_NAME } from "@crm/auth";
 import { DOCUMENT_MAX_BYTES } from "@crm/db/blob";
 import {
 	BadRequestException,
 	Controller,
 	Param,
 	Post,
+	Req,
 	UploadedFile,
+	UseGuards,
 	UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
 	ApiConsumes,
-	ApiCookieAuth,
 	ApiOkResponse,
 	ApiOperation,
 	ApiParam,
 	ApiTags,
 } from "@nestjs/swagger";
-import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import type { Express } from "express";
 import "multer";
-import { DocumentChecklistService } from "./document-checklist.service";
+import { DocumentChecklistService } from "../document-checklist/document-checklist.service";
+import { ClientPortalMattersService } from "./client-portal-matters.service";
+import {
+	ClientSessionGuard,
+	type ClientSessionRequest,
+} from "./client-session.guard";
 
-type CrmSession = UserSession<typeof auth>;
-
-@ApiTags("Matters")
-@ApiCookieAuth(SESSION_COOKIE_NAME)
-@Controller("api/matters/:matterId/documents/:checklistItemId/uploads")
-export class DocumentChecklistUploadController {
-	constructor(private readonly checklist: DocumentChecklistService) {}
+@ApiTags("Client Portal")
+@Controller(
+	"api/client-portal/matters/:matterId/documents/:checklistItemId/uploads",
+)
+@AllowAnonymous()
+@UseGuards(ClientSessionGuard)
+export class ClientPortalDocumentsController {
+	constructor(
+		private readonly matters: ClientPortalMattersService,
+		private readonly checklist: DocumentChecklistService,
+	) {}
 
 	@Post()
 	@UseInterceptors(
@@ -37,17 +46,19 @@ export class DocumentChecklistUploadController {
 	@ApiConsumes("multipart/form-data")
 	@ApiParam({ name: "matterId" })
 	@ApiParam({ name: "checklistItemId" })
-	@ApiOperation({ summary: "Upload a document against a checklist item" })
+	@ApiOperation({ summary: "Upload a document as the signed-in client" })
 	@ApiOkResponse({ description: "The stored upload, pending staff review." })
 	async upload(
 		@Param("matterId") matterId: string,
 		@Param("checklistItemId") checklistItemId: string,
 		@UploadedFile() file: Express.Multer.File | undefined,
-		@Session() session: CrmSession,
+		@Req() request: ClientSessionRequest,
 	) {
 		if (!file) {
 			throw new BadRequestException("No file was uploaded.");
 		}
+
+		await this.matters.assertVisible(request.clientSession.contactId, matterId);
 
 		return this.checklist.upload({
 			checklistItemId,
@@ -55,7 +66,10 @@ export class DocumentChecklistUploadController {
 			filename: file.originalname,
 			contentType: file.mimetype,
 			bytes: file.buffer,
-			uploadedBy: { kind: "staff", userId: session.user.id },
+			uploadedBy: {
+				kind: "client",
+				clientAccountId: request.clientSession.clientAccountId,
+			},
 		});
 	}
 }

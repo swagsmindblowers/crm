@@ -30,6 +30,9 @@ const UPLOAD_SELECT = {
 	reviewedAt: true,
 	createdAt: true,
 	uploadedByUser: { select: { name: true } },
+	uploadedByClientAccount: {
+		select: { contact: { select: { firstName: true, lastName: true } } },
+	},
 } as const;
 
 const ITEM_SELECT = {
@@ -54,7 +57,14 @@ type UploadRow = {
 	reviewedAt: Date | null;
 	createdAt: Date;
 	uploadedByUser: { name: string } | null;
+	uploadedByClientAccount: {
+		contact: { firstName: string; lastName: string | null };
+	} | null;
 };
+
+export type UploadedBy =
+	| { kind: "staff"; userId: string }
+	| { kind: "client"; clientAccountId: string };
 
 type ItemRow = {
 	id: string;
@@ -75,6 +85,14 @@ type ChecklistItemUpdate = {
 	required?: boolean;
 };
 
+function clientAccountName(
+	account: UploadRow["uploadedByClientAccount"],
+): string | null {
+	if (!account) return null;
+	const { firstName, lastName } = account.contact;
+	return lastName ? `${firstName} ${lastName}` : firstName;
+}
+
 function serializeUpload(row: UploadRow) {
 	return {
 		id: row.id,
@@ -82,7 +100,9 @@ function serializeUpload(row: UploadRow) {
 		contentType: row.contentType,
 		byteSize: row.byteSize,
 		url: row.blobUrl,
-		uploadedByName: row.uploadedByUser?.name ?? null,
+		uploadedByName:
+			row.uploadedByUser?.name ??
+			clientAccountName(row.uploadedByClientAccount),
 		reviewStatus: row.reviewStatus,
 		reviewNote: row.reviewNote,
 		reviewedAt: row.reviewedAt?.toISOString() ?? null,
@@ -201,7 +221,7 @@ export class DocumentChecklistService {
 		filename: string;
 		contentType: string;
 		bytes: Buffer;
-		uploadedByUserId: string | null;
+		uploadedBy: UploadedBy;
 	}) {
 		const item = await this.db.documentChecklistItem.findFirst({
 			where: { id: input.checklistItemId, matterId: input.matterId },
@@ -229,7 +249,12 @@ export class DocumentChecklistService {
 				filename: input.filename,
 				contentType: input.contentType,
 				byteSize: stored.byteSize,
-				uploadedByUserId: input.uploadedByUserId,
+				uploadedByUserId:
+					input.uploadedBy.kind === "staff" ? input.uploadedBy.userId : null,
+				uploadedByClientAccountId:
+					input.uploadedBy.kind === "client"
+						? input.uploadedBy.clientAccountId
+						: null,
 			},
 			select: UPLOAD_SELECT,
 		});

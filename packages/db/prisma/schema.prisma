@@ -1083,6 +1083,9 @@ model ChecklistDocumentUpload {
   uploadedByUserId String?
   uploadedByUser   User?   @relation("ChecklistUploadUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
 
+  uploadedByClientAccountId String?
+  uploadedByClientAccount   ClientAccount? @relation(fields: [uploadedByClientAccountId], references: [id], onDelete: SetNull)
+
   reviewStatus DocumentUploadReviewStatus @default(PENDING_REVIEW)
   reviewNote   String?
   reviewedAt   DateTime?
@@ -1107,6 +1110,7 @@ model ClientAccount {
 
   loginTokens ClientLoginToken[]
   sessions    ClientSession[]
+  uploads     ChecklistDocumentUpload[]
 
   @@map("clientAccount")
 }
