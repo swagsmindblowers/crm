@@ -14,7 +14,10 @@ import {
 	OPEN_MATTER_STAGES,
 } from "@crm/db/matter-stage";
 import { checklistTemplateFor } from "@crm/validation/document-checklists";
-import { serviceDefaultFeeCents } from "@crm/validation/matter-services";
+import {
+	type MatterServiceId,
+	serviceDefaultFeeCents,
+} from "@crm/validation/matter-services";
 import {
 	BadRequestException,
 	Injectable,
@@ -482,6 +485,10 @@ export class MattersService {
 					await this.fields.applyValues(tx, "MATTER", id, input.fields);
 				}
 
+				if (input.serviceType !== undefined) {
+					await this.backfillChecklist(tx, id, input.serviceType);
+				}
+
 				return tx.matter.update({
 					where: { id },
 					data,
@@ -491,6 +498,37 @@ export class MattersService {
 		} catch (error) {
 			throw this.translate(error, id);
 		}
+	}
+
+	private async backfillChecklist(
+		tx: Prisma.TransactionClient,
+		matterId: string,
+		serviceType: MatterServiceId,
+	): Promise<void> {
+		const template = checklistTemplateFor(serviceType);
+		if (template.length === 0) return;
+
+		const existing = await tx.documentChecklistItem.count({
+			where: { matterId },
+		});
+		if (existing > 0) return;
+
+		await tx.documentChecklistItem.createMany({
+			data: template.map((item, index) => ({
+				matterId,
+				label: item.label,
+				description: item.description ?? null,
+				required: item.required,
+				position: index,
+				templateKey: item.key,
+			})),
+		});
+
+		this.logger.log({
+			message: "Document checklist backfilled after service change",
+			matterId,
+			serviceType,
+		});
 	}
 
 	async archive(id: string): Promise<{ id: string; name: string }> {
