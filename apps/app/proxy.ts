@@ -18,6 +18,8 @@ const UNGATED = ["/grant-access", "/eve"];
 
 const ANONYMOUS = ["/t"];
 
+const PORTAL_PATH = "/portal";
+
 const SECTIONS = ["/companies", "/contacts", "/matters", "/settings"];
 
 export async function proxy(request: NextRequest) {
@@ -33,6 +35,10 @@ export async function proxy(request: NextRequest) {
 	if (pathname === SIGN_IN_PATH) return NextResponse.next();
 
 	if (isAnonymous(pathname)) return NextResponse.next();
+
+	// The client portal has its own session cookie and its own auth check —
+	// it never joins the staff workspace/onboarding gates below.
+	if (isUnder(pathname, PORTAL_PATH)) return NextResponse.next();
 
 	if (
 		getSessionCookie(request, { cookiePrefix: AUTH_COOKIE_PREFIX }) === null
