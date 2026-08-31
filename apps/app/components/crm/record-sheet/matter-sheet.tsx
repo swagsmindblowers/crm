@@ -645,9 +645,10 @@ function MatterKeyDates({
 
 const DOCUMENT_COLUMNS = [
 	{ id: "done", srLabel: "Received", width: "w-10", className: "pl-5" },
-	{ id: "label", header: "Document", width: "w-[44%]" },
-	{ id: "status", header: "Status", width: "w-[22%]" },
-	{ id: "received", header: "Received", width: "w-[22%]" },
+	{ id: "label", header: "Document", width: "w-[38%]" },
+	{ id: "status", header: "Status", width: "w-[20%]" },
+	{ id: "received", header: "Received", width: "w-[20%]" },
+	{ id: "upload", srLabel: "Upload", width: "w-10" },
 	{ id: "remove", srLabel: "Remove", width: "w-10" },
 ];
 
@@ -832,7 +833,7 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 								<EmptyCellValue />
 							)}
 						</TableCell>
-						<TableCell className="flex items-center justify-end gap-1 px-3 py-2.5">
+						<TableCell className="px-1 py-2.5 text-center">
 							<ChecklistUploadButton
 								matterId={matterId}
 								checklistItemId={item.id}
@@ -840,6 +841,8 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 									queryClient.invalidateQueries({ queryKey: listKey })
 								}
 							/>
+						</TableCell>
+						<TableCell className="px-1 py-2.5 text-center">
 							<Button
 								variant="ghost"
 								size="icon-xs"
