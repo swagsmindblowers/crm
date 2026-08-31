@@ -154,6 +154,12 @@ export class ClientPortalService {
 		return { ok: true, sessionToken: session.token, expiresAt };
 	}
 
+	async signOut(rawToken: string): Promise<void> {
+		await this.db.clientSession.deleteMany({
+			where: { tokenHash: hashToken(rawToken) },
+		});
+	}
+
 	async sessionFromToken(rawToken: string): Promise<ClientSession | null> {
 		const tokenHash = hashToken(rawToken);
 		const row = await this.db.clientSession.findUnique({

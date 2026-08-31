@@ -130,6 +130,17 @@ here gates itself via `readClientSession()`
 - `sign-in/` — email entry, posts to `/api/client-portal/request-link`.
 - `verify/` — reads `?token=`, posts to `/api/client-portal/verify` on
   mount, redirects to `/portal` on success.
+- `portal-header.tsx` — an async server component that calls
+  `readClientSession()` and, only when a session exists, renders
+  `PortalSignOutButton`. That button posts to
+  `POST /api/client-portal/sign-out` (`apps/app/lib/client-portal-sign-out.ts`)
+  and redirects to `/portal/sign-in` regardless of whether the request
+  succeeded — a client should always end up looking signed out. The
+  endpoint itself (`ClientPortalController.signOut`) deletes the
+  `ClientSession` row by its token hash and always clears the cookie
+  (`clientSessionCookie("", new Date(0))`, the same attributes `verify`
+  sets so the browser matches and overwrites it) even if no matching row
+  existed — sign-out is idempotent by design.
 - `page.tsx` — the dashboard: every matter `listPortalMatters()`
   (`apps/app/lib/portal-matters.ts`) returns, each with its simplified
   status badge; the company name only renders when more than one distinct
