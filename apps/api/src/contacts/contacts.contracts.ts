@@ -48,6 +48,7 @@ const contactUpdateInput = z.object({
 	githubUrl: z.string().optional(),
 	companyId: z.string().nullable().optional(),
 	ownerId: z.string().nullable().optional(),
+	isCompanyAdmin: z.boolean().optional(),
 	fields: recordFieldValues.optional(),
 });
 
@@ -234,6 +235,7 @@ export const contactByIdOutput = z.object({
 	twitterUrl: z.string().nullable(),
 	githubUrl: z.string().nullable(),
 	imageUrl: z.string().nullable(),
+	isCompanyAdmin: z.boolean(),
 	enrichmentStatus: z.enum(
 		Object.values(EnrichmentStatus) as [
 			EnrichmentStatus,

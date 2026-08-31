@@ -165,6 +165,7 @@ export class ContactsService {
 				twitterUrl: true,
 				githubUrl: true,
 				imageUrl: true,
+				isCompanyAdmin: true,
 				enrichmentStatus: true,
 				enrichmentError: true,
 				createdAt: true,
@@ -496,6 +497,9 @@ export class ContactsService {
 			data.owner = input.ownerId
 				? { connect: { id: input.ownerId } }
 				: { disconnect: true };
+		}
+		if (input.isCompanyAdmin !== undefined) {
+			data.isCompanyAdmin = input.isCompanyAdmin;
 		}
 
 		try {

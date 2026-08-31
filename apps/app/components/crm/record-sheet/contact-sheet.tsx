@@ -11,6 +11,7 @@ import {
 	AccordionTrigger,
 } from "@crm/ui/components/accordion";
 import { Button } from "@crm/ui/components/button";
+import { Checkbox } from "@crm/ui/components/checkbox";
 import { EmptyCellValue } from "@crm/ui/components/empty-cell";
 import {
 	EntityLogo,
@@ -406,6 +407,22 @@ function ContactOverview({ contact }: { contact: Contact }) {
 							save({ ownerId: ownerId === NONE ? null : ownerId })
 						}
 					/>
+					<DetailSheetProperty label="Client portal">
+						<div className="flex items-center gap-2 text-sm">
+							<Checkbox
+								checked={contact.isCompanyAdmin}
+								disabled={update.isPending}
+								aria-label="Company admin — sees every matter for their company"
+								onCheckedChange={(checked) =>
+									update.mutate({
+										id: contact.id,
+										data: { isCompanyAdmin: checked === true },
+									})
+								}
+							/>
+							<span>Company admin — sees every matter for their company</span>
+						</div>
+					</DetailSheetProperty>
 					<RecordFields
 						fields={contact.fields}
 						saving={isSavingField}

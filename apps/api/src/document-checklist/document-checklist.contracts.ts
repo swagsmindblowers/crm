@@ -1,4 +1,4 @@
-import { DocumentChecklistStatus } from "@crm/db";
+import { DocumentChecklistStatus, DocumentUploadReviewStatus } from "@crm/db";
 import { z } from "zod";
 
 const statusEnum = z.enum(
@@ -8,7 +8,29 @@ const statusEnum = z.enum(
 	],
 );
 
+const reviewStatusEnum = z.enum(
+	Object.values(DocumentUploadReviewStatus) as [
+		DocumentUploadReviewStatus,
+		...DocumentUploadReviewStatus[],
+	],
+);
+
 export const checklistListInput = z.object({ matterId: z.string() });
+
+export const checklistUploadOutput = z.object({
+	id: z.string(),
+	filename: z.string(),
+	contentType: z.string(),
+	byteSize: z.number(),
+	url: z.string(),
+	uploadedByName: z.string().nullable(),
+	reviewStatus: reviewStatusEnum,
+	reviewNote: z.string().nullable(),
+	reviewedAt: z.string().nullable(),
+	createdAt: z.string(),
+});
+
+export type ChecklistUpload = z.infer<typeof checklistUploadOutput>;
 
 export const checklistItemOutput = z.object({
 	id: z.string(),
@@ -18,6 +40,7 @@ export const checklistItemOutput = z.object({
 	receivedAt: z.string().nullable(),
 	required: z.boolean(),
 	position: z.number(),
+	uploads: z.array(checklistUploadOutput),
 });
 
 export type ChecklistItem = z.infer<typeof checklistItemOutput>;
@@ -53,3 +76,17 @@ export const checklistRemoveInput = z.object({
 });
 
 export const checklistRemovedOutput = z.object({ id: z.string() });
+
+export const checklistUploadReviewInput = z.object({
+	id: z.string(),
+	matterId: z.string(),
+	decision: z.enum([
+		DocumentUploadReviewStatus.ACCEPTED,
+		DocumentUploadReviewStatus.REJECTED,
+	]),
+	note: z.string().trim().max(500).nullable().optional(),
+});
+
+export type ChecklistUploadReviewInput = z.infer<
+	typeof checklistUploadReviewInput
+>;
