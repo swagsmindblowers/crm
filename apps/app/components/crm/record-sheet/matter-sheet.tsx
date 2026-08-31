@@ -31,7 +31,7 @@ import {
 	serviceDefaultFeeCents,
 	serviceLabel,
 } from "@crm/validation/matter-services";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AgentPanel } from "@/components/crm/agent-panel";
 import { InlineCompanyField } from "@/components/crm/company-picker";
@@ -460,13 +460,39 @@ function MatterOverview({ matter }: { matter: Matter }) {
 function ConflictFlag({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
+	const queryClient = useQueryClient();
 
+	const listKey = trpc.conflictChecks.list.queryKey({ matterId });
 	const query = useQuery(trpc.conflictChecks.list.queryOptions({ matterId }));
 
 	const dismiss = useMutation(
 		trpc.conflictChecks.dismiss.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
-			onError: (error) => toast.error(error.message),
+			onMutate: async ({ id, note }) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						checks: previous.checks.map((check) =>
+							check.id === id
+								? {
+										...check,
+										status: "DISMISSED" as const,
+										dismissedAt: new Date().toISOString(),
+										dismissedNote: note,
+									}
+								: check,
+						),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
 		}),
 	);
 
@@ -631,15 +657,45 @@ const DOCUMENT_STATUS_LABEL = {
 function MatterDocuments({ matterId }: { matterId: string }) {
 	const trpc = useTRPC();
 	const cache = useCrmCache();
+	const queryClient = useQueryClient();
 
+	const listKey = trpc.documentChecklist.list.queryKey({ matterId });
 	const query = useQuery(
 		trpc.documentChecklist.list.queryOptions({ matterId }),
 	);
 
 	const update = useMutation(
 		trpc.documentChecklist.update.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
-			onError: (error) => toast.error(error.message),
+			onMutate: async (input) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						items: previous.items.map((item) =>
+							item.id === input.id
+								? {
+										...item,
+										...input,
+										receivedAt:
+											input.status === "RECEIVED"
+												? new Date().toISOString()
+												: input.status
+													? null
+													: item.receivedAt,
+									}
+								: item,
+						),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
 		}),
 	);
 
@@ -652,8 +708,23 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 
 	const remove = useMutation(
 		trpc.documentChecklist.remove.mutationOptions({
-			onSuccess: () => cache.matter(matterId, { settle: "record" }),
-			onError: (error) => toast.error(error.message),
+			onMutate: async (input) => {
+				await queryClient.cancelQueries({ queryKey: listKey });
+				const previous = queryClient.getQueryData(listKey);
+				if (previous) {
+					queryClient.setQueryData(listKey, {
+						...previous,
+						items: previous.items.filter((item) => item.id !== input.id),
+					});
+				}
+				return { previous };
+			},
+			onError: (error, _input, context) => {
+				if (context?.previous)
+					queryClient.setQueryData(listKey, context.previous);
+				toast.error(error.message);
+			},
+			onSettled: () => cache.matter(matterId, { settle: "record" }),
 		}),
 	);
 

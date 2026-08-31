@@ -1,5 +1,8 @@
 import { Logger } from "@nestjs/common";
 import { createApp } from "./create-app";
+import { initErrorMonitoring } from "./logging/error-monitoring";
+
+initErrorMonitoring();
 
 async function bootstrap() {
 	const app = await createApp();

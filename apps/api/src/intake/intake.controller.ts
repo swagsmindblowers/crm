@@ -17,9 +17,11 @@ import {
 	ApiServiceUnavailableResponse,
 	ApiTags,
 } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import type { z } from "zod";
 import type { EnvironmentVariables } from "../config/env.validation";
+import { RATE_LIMIT } from "../rate-limit-config";
 import { intakeSubmission } from "./intake.contracts";
 import { IntakeService } from "./intake.service";
 
@@ -49,6 +51,7 @@ export class IntakeController {
 
 	@Post("submissions")
 	@AllowAnonymous()
+	@Throttle({ default: RATE_LIMIT.intake })
 	@HttpCode(202)
 	@ApiOperation({
 		summary: "Accept an intake form submission from Power Automate",

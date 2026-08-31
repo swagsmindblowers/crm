@@ -47,6 +47,10 @@ export function LandingFooter() {
 						</Link>
 					</p>
 
+					<Link variant="quiet" href="/privacy" className="text-[13px]/5">
+						Privacy
+					</Link>
+
 					<p className="flex items-center gap-2 text-[13px]/5 text-muted-foreground">
 						<span className="size-1.5 shrink-0 rounded-full bg-ring" />
 						All systems normal

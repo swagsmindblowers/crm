@@ -1,6 +1,8 @@
 import { auth } from "@crm/auth";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
 import { ActivitiesModule } from "./activities/activities.module";
 import { AgentModule } from "./agent/agent.module";
@@ -23,12 +25,14 @@ import { EnrichmentModule } from "./enrichment/enrichment.module";
 import { FieldsModule } from "./fields/fields.module";
 import { GoogleModule } from "./google/google.module";
 import { HealthModule } from "./health/health.module";
+import { HTTP } from "./http-config";
 import { IntakeModule } from "./intake/intake.module";
 import { LoggingModule } from "./logging/logging.module";
 import { logAuthRoute } from "./logging/request-logger.middleware";
 import { MailboxModule } from "./mailbox/mailbox.module";
 import { MattersModule } from "./matters/matters.module";
 import { MicrosoftModule } from "./microsoft/microsoft.module";
+import { RATE_LIMIT } from "./rate-limit-config";
 import { SavedViewsModule } from "./saved-views/saved-views.module";
 import { SearchModule } from "./search/search.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -49,10 +53,18 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 			cache: true,
 			validate: validateEnv,
 		}),
+		ThrottlerModule.forRoot([RATE_LIMIT.default]),
 		AppCacheModule,
 		DatabaseModule,
 		CrmModule,
-		BetterAuthModule.forRoot({ auth, middleware: logAuthRoute }),
+		BetterAuthModule.forRoot({
+			auth,
+			middleware: logAuthRoute,
+			bodyParser: {
+				json: { limit: HTTP.bodySizeLimit },
+				urlencoded: { limit: HTTP.bodySizeLimit },
+			},
+		}),
 		AuthModule,
 		HealthModule,
 		TrpcModule,
@@ -86,5 +98,6 @@ import { WorkspaceModule } from "./workspace/workspace.module";
 		ArchiveModule,
 		SavedViewsModule,
 	],
+	providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

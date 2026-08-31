@@ -203,6 +203,22 @@ is sent. No client is constructed, so there is no queue waiting to flush later.
 - Declared in `env.validation.ts` as optional, like everything else here. Every
   event and the never-sent list are in **`docs/telemetry.md`**.
 
+## Maintenance mode — one variable, both apps
+
+`MAINTENANCE_MODE` — set to any non-empty value on both `api` and `app` to
+take the whole CRM down for maintenance. The API returns 503 for every route
+except `/health` (so Railway's own health check still passes and the service
+isn't restarted); the app's `proxy.ts` returns the same 503 for every page.
+Unset it — do not set it to an empty string — to bring the CRM back. Declared
+in `env.validation.ts` as optional, like everything else here.
+
+## Error monitoring — off by default, one variable turns it on
+
+`SENTRY_DSN` — optional, on `api`, `app` and `agent`. Without it, unhandled
+errors are still logged (see the logging conventions in `docs/api.md`), just
+not sent anywhere. With it, `@sentry/node` reports them. Declared in
+`env.validation.ts` as optional, like everything else here.
+
 ## Not env vars
 
 - **Cache TTL** — `DEFAULT_TTL_MS` (60s) in `cache.module.ts`; `CACHE_TTL_MS` overrides.

@@ -4,7 +4,10 @@ import { DEFAULT_AGENT_MODEL } from "@crm/db/settings";
 import { onTelemetryProblem, syncVersion } from "@crm/telemetry";
 import { defineAgent, defineDynamic } from "eve";
 import { logCapabilities } from "./lib/capabilities";
+import { initErrorMonitoring } from "./lib/error-monitoring";
 import { selectedModel } from "./lib/model";
+
+initErrorMonitoring();
 
 void logCapabilities();
 

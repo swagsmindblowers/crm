@@ -7,18 +7,26 @@ import { queueEventAgentRuns } from "./custom-agent-dispatch";
 import { settledWithin } from "./deadline";
 import { DISPATCH } from "./dispatch-config";
 import { markRunning, settle } from "./enrichment";
+import { reportError } from "./error-monitoring";
 import { collapsing, runLimited } from "./pool";
 import { runPortrait } from "./portrait";
 import { runSlackChannelJoin } from "./slack-join-task";
 import { runSlackPeopleMatch } from "./slack-people";
 import { staleTaskSweep } from "./stale-tasks";
 import {
+	budgetStartedSince,
 	claimDue,
 	completeTask,
 	DIRECT_KINDS,
 	type LeasedTask,
 	noteSession,
 } from "./tasks";
+
+const DAY_MS = 24 * 60 * 60 * 1_000;
+
+function startOfToday(): Date {
+	return new Date(Date.now() - (Date.now() % DAY_MS));
+}
 
 export const VISIBLE_BATCH = DISPATCH.visible.batch;
 export const VISIBLE_CONCURRENCY = DISPATCH.visible.concurrency;
@@ -152,6 +160,9 @@ export async function runResearchLane(
 ): Promise<number> {
 	if (signal?.aborted) return 0;
 
+	const spentToday = await budgetStartedSince(startOfToday());
+	if (spentToday >= DISPATCH.usage.dailyTaskBudgetCap) return 0;
+
 	const tasks = await claimDue(
 		RESEARCH_BATCH,
 		{ except: DIRECT_KINDS },
@@ -250,6 +261,7 @@ export async function linkSession(
 }
 
 function reasonOf(cause: unknown): string {
+	reportError(cause);
 	return cause instanceof Error ? cause.message : String(cause);
 }
 

@@ -57,7 +57,10 @@
 				"packages/db/src/fields.ts",
 				"packages/db/src/fields-shape.ts",
 				"apps/api/src/fields/**",
-				"apps/app/components/crm/inline-field.tsx"
+				"apps/app/components/crm/inline-field.tsx",
+				"apps/agent/agent/lib/error-monitoring.ts",
+				"apps/app/lib/error-monitoring.ts",
+				"apps/app/instrumentation.ts"
 			],
 			"rules": {
 				"anti-slop/no-unsafe-dictionary-type": "off",

@@ -23,6 +23,13 @@ const SECTIONS = ["/companies", "/contacts", "/matters", "/settings"];
 export async function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
+	if (process.env.MAINTENANCE_MODE) {
+		return NextResponse.json(
+			{ message: "This CRM is temporarily unavailable for maintenance." },
+			{ status: 503 },
+		);
+	}
+
 	if (pathname === SIGN_IN_PATH) return NextResponse.next();
 
 	if (isAnonymous(pathname)) return NextResponse.next();
