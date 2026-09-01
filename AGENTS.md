@@ -15,6 +15,7 @@ context until you read them, and the rules in them are not optional.
 | `/settings/connections`, integrations, the intake endpoint | `docs/connections.md` |
 | The client portal, `/portal`, client document uploads and status | `docs/client-portal.md` |
 | The tracking script, the collector, form submissions | `docs/tracking.md` |
+| `apps/mcp`, the CRM's MCP server | `docs/mcp.md` |
 | Running it locally, Google Cloud, DB commands, secrets | `docs/setup.md` |
 | Rollback, database backups, secret rotation | `docs/operations.md` |
 | Anything that sends a telemetry event, or a new property on one | `docs/telemetry.md` |
