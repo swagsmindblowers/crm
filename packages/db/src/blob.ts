@@ -103,7 +103,7 @@ export async function readDocument(
 	try {
 		const { get } = await import("@vercel/blob");
 		const result = await get(url, { access: "private" });
-		if (!result || result.statusCode !== 200) return null;
+		if (result?.statusCode !== 200) return null;
 
 		return { stream: result.stream, contentType: result.blob.contentType };
 	} catch (error) {
