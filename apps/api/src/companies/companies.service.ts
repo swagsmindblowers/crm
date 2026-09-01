@@ -5,6 +5,7 @@ import {
 	Prisma as PrismaNamespace,
 	type RecordSource,
 } from "@crm/db";
+import { deleteDocuments } from "@crm/db/blob";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
 import { OPEN_MATTER_STAGES } from "@crm/db/matter-stage";
 import {
@@ -25,6 +26,7 @@ import { type BulkResult, requireOwner, runBulk } from "../crm/bulk";
 import { blankToNull, toCents } from "../crm/values";
 import { ConversionService } from "../currency/conversion.service";
 import { InjectDatabase } from "../database/database.constants";
+import { DocumentChecklistService } from "../document-checklist/document-checklist.service";
 import { FieldsService } from "../fields/fields.service";
 import {
 	activityFacetCounts,
@@ -79,6 +81,7 @@ export class CompaniesService {
 		private readonly stamp: ActivityStampService,
 		private readonly conversion: ConversionService,
 		private readonly fields: FieldsService,
+		private readonly documentChecklist: DocumentChecklistService,
 	) {}
 
 	async list(input: CompanyListInput): Promise<ListResult<CompanyRow>> {
@@ -434,6 +437,16 @@ export class CompaniesService {
 		id: string,
 		guard?: { archivedBefore: Date },
 	): Promise<{ id: string; name: string } | null> {
+		const matterIdsBeforeDelete = (
+			await this.db.matter.findMany({
+				where: { companyId: id },
+				select: { id: true },
+			})
+		).map((matter) => matter.id);
+		const blobUrls = await this.documentChecklist.blobUrlsForMatters(
+			matterIdsBeforeDelete,
+		);
+
 		let deleted: { targets: StampTargets; name: string } | null;
 
 		try {
@@ -486,6 +499,7 @@ export class CompaniesService {
 		if (!deleted) return null;
 
 		await this.stamp.recomputeAfterDelete(deleted.targets, { companyId: id });
+		await deleteDocuments(blobUrls);
 
 		this.logger.log({
 			message: "Company purged",

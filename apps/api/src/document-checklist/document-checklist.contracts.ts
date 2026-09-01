@@ -22,7 +22,6 @@ export const checklistUploadOutput = z.object({
 	filename: z.string(),
 	contentType: z.string(),
 	byteSize: z.number(),
-	url: z.string(),
 	uploadedByName: z.string().nullable(),
 	reviewStatus: reviewStatusEnum,
 	reviewNote: z.string().nullable(),

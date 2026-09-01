@@ -3,7 +3,7 @@ import {
 	DocumentChecklistStatus,
 	DocumentUploadReviewStatus,
 } from "@crm/db";
-import { uploadDocument } from "@crm/db/blob";
+import { deleteDocuments, uploadDocument } from "@crm/db/blob";
 import {
 	BadRequestException,
 	Injectable,
@@ -99,7 +99,6 @@ function serializeUpload(row: UploadRow) {
 		filename: row.filename,
 		contentType: row.contentType,
 		byteSize: row.byteSize,
-		url: row.blobUrl,
 		uploadedByName:
 			row.uploadedByUser?.name ??
 			clientAccountName(row.uploadedByClientAccount),
@@ -206,13 +205,57 @@ export class DocumentChecklistService {
 	}
 
 	async remove(input: { id: string; matterId: string }) {
+		const blobUrls = await this.blobUrlsForItems([input.id]);
+
 		const { count } = await this.db.documentChecklistItem.deleteMany({
 			where: { id: input.id, matterId: input.matterId },
 		});
 		if (count === 0) {
 			throw new NotFoundException("That document is not on this matter.");
 		}
+
+		await deleteDocuments(blobUrls);
+
 		return { id: input.id };
+	}
+
+	async blobUrlsForItems(checklistItemIds: string[]): Promise<string[]> {
+		if (checklistItemIds.length === 0) return [];
+
+		const uploads = await this.db.checklistDocumentUpload.findMany({
+			where: { checklistItemId: { in: checklistItemIds } },
+			select: { blobUrl: true },
+		});
+		return uploads.map((upload) => upload.blobUrl);
+	}
+
+	async blobUrlsForMatters(matterIds: string[]): Promise<string[]> {
+		if (matterIds.length === 0) return [];
+
+		const uploads = await this.db.checklistDocumentUpload.findMany({
+			where: { checklistItem: { matterId: { in: matterIds } } },
+			select: { blobUrl: true },
+		});
+		return uploads.map((upload) => upload.blobUrl);
+	}
+
+	async uploadForDownload(input: {
+		uploadId: string;
+		checklistItemId: string;
+		matterId: string;
+	}): Promise<{ blobUrl: string; filename: string; contentType: string }> {
+		const upload = await this.db.checklistDocumentUpload.findFirst({
+			where: {
+				id: input.uploadId,
+				checklistItemId: input.checklistItemId,
+				checklistItem: { matterId: input.matterId },
+			},
+			select: { blobUrl: true, filename: true, contentType: true },
+		});
+		if (!upload) {
+			throw new NotFoundException("That upload is not on this matter.");
+		}
+		return upload;
 	}
 
 	async upload(input: {

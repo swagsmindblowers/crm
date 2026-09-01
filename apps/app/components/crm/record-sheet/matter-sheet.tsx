@@ -66,6 +66,7 @@ import {
 	LocalDay,
 	LocalRelativeTime,
 } from "@/components/local-date-time";
+import { API_URL } from "@/lib/env";
 import { savingField } from "@/lib/pending-field";
 import { useCrmCache } from "@/lib/trpc/cache";
 import { useTRPC } from "@/lib/trpc/client";
@@ -867,7 +868,7 @@ function MatterDocuments({ matterId }: { matterId: string }) {
 											className="flex items-center justify-between gap-3 text-xs"
 										>
 											<a
-												href={upload.url}
+												href={`${API_URL}/api/matters/${matterId}/documents/${item.id}/uploads/${upload.id}/download`}
 												target="_blank"
 												rel="noreferrer"
 												className="truncate text-foreground underline-offset-2 hover:underline"

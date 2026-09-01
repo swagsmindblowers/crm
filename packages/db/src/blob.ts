@@ -73,7 +73,7 @@ export async function uploadDocument(
 		const { put } = await import("@vercel/blob");
 
 		const blob = await put(`${options.prefix}-${digest}.${extension}`, bytes, {
-			access: "public",
+			access: "private",
 			contentType: options.contentType,
 			addRandomSuffix: false,
 			allowOverwrite: true,
@@ -87,6 +87,42 @@ export async function uploadDocument(
 			code: "storage-failed",
 			reason: "Could not store the file. Try again.",
 		};
+	}
+}
+
+export type DocumentStreamResult = {
+	stream: ReadableStream<Uint8Array>;
+	contentType: string;
+};
+
+export async function readDocument(
+	url: string,
+): Promise<DocumentStreamResult | null> {
+	if (!blobEnabled()) return null;
+
+	try {
+		const { get } = await import("@vercel/blob");
+		const result = await get(url, { access: "private" });
+		if (!result || result.statusCode !== 200) return null;
+
+		return { stream: result.stream, contentType: result.blob.contentType };
+	} catch (error) {
+		console.error("readDocument: fetching the file failed", error);
+		return null;
+	}
+}
+
+export async function deleteDocuments(urls: string[]): Promise<void> {
+	if (!blobEnabled() || urls.length === 0) return;
+
+	try {
+		const { del } = await import("@vercel/blob");
+		await del(urls);
+	} catch (error) {
+		console.error("deleteDocuments: could not delete stored files", {
+			urls,
+			error,
+		});
 	}
 }
 

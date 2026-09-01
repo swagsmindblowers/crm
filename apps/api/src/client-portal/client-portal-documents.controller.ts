@@ -1,10 +1,14 @@
-import { DOCUMENT_MAX_BYTES } from "@crm/db/blob";
+import { Readable } from "node:stream";
+import { DOCUMENT_MAX_BYTES, readDocument } from "@crm/db/blob";
 import {
 	BadRequestException,
 	Controller,
+	Get,
+	NotFoundException,
 	Param,
 	Post,
 	Req,
+	Res,
 	UploadedFile,
 	UseGuards,
 	UseInterceptors,
@@ -18,7 +22,7 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import "multer";
 import { DocumentChecklistService } from "../document-checklist/document-checklist.service";
 import { ClientPortalMattersService } from "./client-portal-matters.service";
@@ -71,5 +75,40 @@ export class ClientPortalDocumentsController {
 				clientAccountId: request.clientSession.clientAccountId,
 			},
 		});
+	}
+
+	@Get(":uploadId/download")
+	@ApiParam({ name: "matterId" })
+	@ApiParam({ name: "checklistItemId" })
+	@ApiParam({ name: "uploadId" })
+	@ApiOperation({ summary: "Download a document as the signed-in client" })
+	@ApiOkResponse({ description: "The stored file." })
+	async download(
+		@Param("matterId") matterId: string,
+		@Param("checklistItemId") checklistItemId: string,
+		@Param("uploadId") uploadId: string,
+		@Req() request: ClientSessionRequest,
+		@Res({ passthrough: false }) response: Response,
+	) {
+		await this.matters.assertVisible(request.clientSession.contactId, matterId);
+
+		const upload = await this.checklist.uploadForDownload({
+			uploadId,
+			checklistItemId,
+			matterId,
+		});
+
+		const document = await readDocument(upload.blobUrl);
+		if (!document) {
+			throw new NotFoundException("That file could not be found.");
+		}
+
+		response.setHeader("Content-Type", document.contentType);
+		response.setHeader("X-Content-Type-Options", "nosniff");
+		response.setHeader(
+			"Content-Disposition",
+			`attachment; filename="${encodeURIComponent(upload.filename)}"`,
+		);
+		Readable.fromWeb(document.stream).pipe(response);
 	}
 }

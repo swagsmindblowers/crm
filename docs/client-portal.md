@@ -120,6 +120,19 @@ Two parallel controllers reach the same service:
   before touching the checklist service, so a client can't upload against a
   matter it can't see even if it somehow has a valid checklist-item id.
 
+Uploads store with `access: "private"` in Blob — the store itself must be
+configured for private access, or every upload throws. A file is never
+reachable by a bare URL. Each controller also exposes a matching
+`GET .../uploads/:uploadId/download` route, gated behind the same session
+guard as the upload route, that streams the file through
+`readDocument()` (`packages/db/src/blob.ts`) rather than returning the
+Blob URL directly — `checklistUploadOutput` (the upload contract) has no
+`url` field. `MattersService.purge()` and `CompaniesService.purge()` call
+`documentChecklist.blobUrlsForMatters()` before their delete transaction
+runs (rows are gone after), then `deleteDocuments()` afterwards, so a
+purge actually removes the stored files, not just the DB rows — this
+matters for the 6-year IAA retention window.
+
 ## Client-facing pages (`apps/app/app/(portal)/portal/`)
 
 A route group living outside `[slug]`, since `proxy.ts` already special

@@ -9,6 +9,7 @@ import { ContactsService } from "../src/contacts/contacts.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { EnrichmentLogService } from "../src/crm/enrichment-log.service";
 import { ConversionService } from "../src/currency/conversion.service";
+import { DocumentChecklistService } from "../src/document-checklist/document-checklist.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { MailboxMatchService } from "../src/mailbox/mailbox-match.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
@@ -54,6 +55,7 @@ const companies = new CompaniesService(
 	stamp,
 	conversion,
 	fields,
+	new DocumentChecklistService(db),
 );
 const match = new MailboxMatchService(db, directory, agent, log);
 

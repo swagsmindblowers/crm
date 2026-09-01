@@ -5,6 +5,7 @@ import {
 	type Prisma,
 	Prisma as PrismaNamespace,
 } from "@crm/db";
+import { deleteDocuments } from "@crm/db/blob";
 import { normalizeCurrency } from "@crm/db/currency";
 import type { FieldDefinitionWithOptions } from "@crm/db/fields";
 import {
@@ -39,6 +40,7 @@ import {
 } from "../crm/values";
 import { ConversionService } from "../currency/conversion.service";
 import { InjectDatabase } from "../database/database.constants";
+import { DocumentChecklistService } from "../document-checklist/document-checklist.service";
 import { FieldsService } from "../fields/fields.service";
 import {
 	archivedFilter,
@@ -123,6 +125,7 @@ export class MattersService {
 		private readonly stamp: ActivityStampService,
 		private readonly conversion: ConversionService,
 		private readonly fields: FieldsService,
+		private readonly documentChecklist: DocumentChecklistService,
 	) {}
 
 	async list(input: MatterListInput) {
@@ -572,6 +575,8 @@ export class MattersService {
 		id: string,
 		guard?: { archivedBefore: Date },
 	): Promise<{ id: string; name: string } | null> {
+		const blobUrls = await this.documentChecklist.blobUrlsForMatters([id]);
+
 		let deleted: { targets: StampTargets; name: string } | null;
 
 		try {
@@ -608,6 +613,7 @@ export class MattersService {
 		if (!deleted) return null;
 
 		await this.stamp.recomputeAfterDelete(deleted.targets, { matterId: id });
+		await deleteDocuments(blobUrls);
 
 		this.logger.log({
 			message: "Matter purged",

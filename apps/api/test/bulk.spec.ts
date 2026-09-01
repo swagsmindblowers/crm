@@ -8,6 +8,7 @@ import type { FaviconService } from "../src/companies/favicon.service";
 import { ContactsService } from "../src/contacts/contacts.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
+import { DocumentChecklistService } from "../src/document-checklist/document-checklist.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
@@ -48,8 +49,16 @@ const companies = new CompaniesService(
 	stamp,
 	conversion,
 	fields,
+	new DocumentChecklistService(db),
 );
-const matters = new MattersService(db, agent, stamp, conversion, fields);
+const matters = new MattersService(
+	db,
+	agent,
+	stamp,
+	conversion,
+	fields,
+	new DocumentChecklistService(db),
+);
 
 let companyId: string;
 
