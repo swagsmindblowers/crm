@@ -3,6 +3,7 @@ import { db } from "@crm/db";
 import type { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
+import { DocumentChecklistService } from "../src/document-checklist/document-checklist.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { MattersService } from "../src/matters/matters.service";
 import { withDiscardedCrmEvents } from "./agent-trigger.stub";
@@ -22,6 +23,7 @@ const matters = new MattersService(
 	new ActivityStampService(db),
 	new ConversionService(db),
 	new FieldsService(db, { fieldBackfill: async () => undefined } as never),
+	new DocumentChecklistService(db),
 );
 
 let companyId: string;

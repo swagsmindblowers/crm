@@ -186,7 +186,9 @@ describe("retireExhausted", () => {
 
 		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
 			const claimed = await claimDue(10, RESEARCH);
-			for (const task of claimed) await expire(task.id);
+			for (const task of claimed) {
+				if (mine.includes(task.id)) await expire(task.id);
+			}
 		}
 
 		for (let pass = 0; pass < 3; pass++) {

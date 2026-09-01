@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AgentModule } from "../agent/agent.module";
 import { CurrencyModule } from "../currency/currency.module";
+import { DocumentChecklistModule } from "../document-checklist/document-checklist.module";
 import { FieldsModule } from "../fields/fields.module";
 import { TrpcModule } from "../trpc/trpc.module";
 import { CompaniesRouter } from "./companies.router";
@@ -9,7 +10,13 @@ import { CompanyDirectoryService } from "./company-directory.service";
 import { FaviconService } from "./favicon.service";
 
 @Module({
-	imports: [FieldsModule, TrpcModule, AgentModule, CurrencyModule],
+	imports: [
+		FieldsModule,
+		TrpcModule,
+		AgentModule,
+		CurrencyModule,
+		DocumentChecklistModule,
+	],
 	providers: [
 		CompaniesService,
 		CompanyDirectoryService,

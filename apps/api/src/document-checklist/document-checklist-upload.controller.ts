@@ -1,10 +1,14 @@
+import { Readable } from "node:stream";
 import { type auth, SESSION_COOKIE_NAME } from "@crm/auth";
-import { DOCUMENT_MAX_BYTES } from "@crm/db/blob";
+import { DOCUMENT_MAX_BYTES, readDocument } from "@crm/db/blob";
 import {
 	BadRequestException,
 	Controller,
+	Get,
+	NotFoundException,
 	Param,
 	Post,
+	Res,
 	UploadedFile,
 	UseInterceptors,
 } from "@nestjs/common";
@@ -18,7 +22,7 @@ import {
 	ApiTags,
 } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
-import type { Express } from "express";
+import type { Express, Response } from "express";
 import "multer";
 import { DocumentChecklistService } from "./document-checklist.service";
 
@@ -57,5 +61,38 @@ export class DocumentChecklistUploadController {
 			bytes: file.buffer,
 			uploadedBy: { kind: "staff", userId: session.user.id },
 		});
+	}
+
+	@Get(":uploadId/download")
+	@ApiParam({ name: "matterId" })
+	@ApiParam({ name: "checklistItemId" })
+	@ApiParam({ name: "uploadId" })
+	@ApiOperation({ summary: "Download a document uploaded against a matter" })
+	@ApiOkResponse({ description: "The stored file." })
+	async download(
+		@Param("matterId") matterId: string,
+		@Param("checklistItemId") checklistItemId: string,
+		@Param("uploadId") uploadId: string,
+		@Res({ passthrough: false }) response: Response,
+		@Session() _session: CrmSession,
+	) {
+		const upload = await this.checklist.uploadForDownload({
+			uploadId,
+			checklistItemId,
+			matterId,
+		});
+
+		const document = await readDocument(upload.blobUrl);
+		if (!document) {
+			throw new NotFoundException("That file could not be found.");
+		}
+
+		response.setHeader("Content-Type", document.contentType);
+		response.setHeader("X-Content-Type-Options", "nosniff");
+		response.setHeader(
+			"Content-Disposition",
+			`attachment; filename="${encodeURIComponent(upload.filename)}"`,
+		);
+		Readable.fromWeb(document.stream).pipe(response);
 	}
 }

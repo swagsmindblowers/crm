@@ -3,6 +3,7 @@ import { db } from "@crm/db";
 import { AgentTriggerService } from "../src/agent/agent-trigger.service";
 import { ActivityStampService } from "../src/crm/activity-stamp.service";
 import { ConversionService } from "../src/currency/conversion.service";
+import { DocumentChecklistService } from "../src/document-checklist/document-checklist.service";
 import { FieldsService } from "../src/fields/fields.service";
 import { MattersService } from "../src/matters/matters.service";
 
@@ -14,7 +15,14 @@ const service = new AgentTriggerService(db);
 const stamp = new ActivityStampService(db);
 const conversion = new ConversionService(db);
 const fields = new FieldsService(db, service);
-const matters = new MattersService(db, service, stamp, conversion, fields);
+const matters = new MattersService(
+	db,
+	service,
+	stamp,
+	conversion,
+	fields,
+	new DocumentChecklistService(db),
+);
 const channelId = `event-channel-${suffix}`;
 const ownerId = `event-owner-${suffix}`;
 const domain = `event-${suffix}.example.test`;
