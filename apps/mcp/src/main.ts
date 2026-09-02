@@ -2,10 +2,18 @@ import "@crm/env/load";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { MCP_CONFIG } from "./config";
 import { createMcpServer } from "./mcp-server";
+import {
+	handleAuthorizeGet,
+	handleAuthorizePost,
+	handleRegister,
+	handleToken,
+	handleWellKnownAuthorizationServer,
+	handleWellKnownProtectedResource,
+} from "./oauth/routes";
 
 const CORS_HEADERS = {
 	"Access-Control-Allow-Origin": "*",
-	"Access-Control-Allow-Methods": "POST, OPTIONS",
+	"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 	"Access-Control-Allow-Headers":
 		"Content-Type, Authorization, x-api-key, Mcp-Session-Id, Mcp-Protocol-Version",
 	"Access-Control-Expose-Headers": "Mcp-Session-Id",
@@ -51,31 +59,56 @@ async function handleMcp(request: Request): Promise<Response> {
 	return transport.handleRequest(request);
 }
 
+async function route(request: Request, url: URL): Promise<Response> {
+	if (url.pathname === "/health") {
+		return new Response("ok", { status: 200 });
+	}
+
+	if (url.pathname === "/mcp") {
+		if (request.method !== "POST") {
+			return new Response("This server is stateless: only POST is supported.", {
+				status: 405,
+			});
+		}
+		return handleMcp(request);
+	}
+
+	if (
+		url.pathname === "/.well-known/oauth-protected-resource" ||
+		url.pathname === "/.well-known/oauth-protected-resource/mcp"
+	) {
+		return handleWellKnownProtectedResource(request);
+	}
+
+	if (url.pathname === "/.well-known/oauth-authorization-server") {
+		return handleWellKnownAuthorizationServer(request);
+	}
+
+	if (url.pathname === "/register" && request.method === "POST") {
+		return handleRegister(request);
+	}
+
+	if (url.pathname === "/authorize") {
+		if (request.method === "POST") return handleAuthorizePost(request);
+		if (request.method === "GET") return handleAuthorizeGet(request);
+	}
+
+	if (url.pathname === "/token" && request.method === "POST") {
+		return handleToken(request);
+	}
+
+	return new Response("Not found", { status: 404 });
+}
+
 Bun.serve({
 	port: MCP_CONFIG.server.port,
 	async fetch(request) {
-		const url = new URL(request.url);
-
 		if (request.method === "OPTIONS") {
 			return withCors(new Response(null, { status: 204 }));
 		}
 
-		if (url.pathname === "/health") {
-			return new Response("ok", { status: 200 });
-		}
-
-		if (url.pathname === "/mcp") {
-			if (request.method !== "POST") {
-				return withCors(
-					new Response("This server is stateless: only POST is supported.", {
-						status: 405,
-					}),
-				);
-			}
-			return withCors(await handleMcp(request));
-		}
-
-		return new Response("Not found", { status: 404 });
+		const url = new URL(request.url);
+		return withCors(await route(request, url));
 	},
 });
 

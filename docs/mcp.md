@@ -55,11 +55,58 @@ Two REST body shapes to get right when adding a tool:
 When in doubt, read the router file's `restMeta(...)` call and the Zod
 schema it references in `*.contracts.ts` before guessing the REST shape.
 
-## `packages/env` gives `API_URL`, no new required variable
+## `packages/env` gives `API_URL`, no new required variable for the header path
 
 `src/config.ts` reads `process.env.API_URL` (already documented in
-`docs/environment.md`) and `process.env.PORT`. Nothing else is required —
-there is no service credential to provision for this app.
+`docs/environment.md`) and `process.env.PORT`. A client that supplies the
+header directly (`claude mcp add --transport http ... --header
+"Authorization: Bearer crm_..."`, the pattern Claude Code uses) needs
+nothing else.
+
+## OAuth wrapper (`src/oauth/`) — for clients that require it
+
+claude.ai's remote-connector setup does not try a manually-entered header
+first. It probes unauthenticated, then walks an OAuth 2.1 discovery chain
+(`.well-known/oauth-protected-resource`, `.well-known/oauth-authorization-server`,
+dynamic client registration, `/authorize`) — confirmed from the real
+traffic in Railway's `http` log for the `mcp` service the day this shipped.
+Without those endpoints the whole connector reports "not found" before it
+ever reaches the header you configured.
+
+**The OAuth "access token" is just the user's existing CRM API key.**
+There is still no credential store: the `/authorize` step is a
+server-rendered HTML form (`src/oauth/authorize-page.ts`, no JS
+framework) asking the visitor to paste their personal key — the same
+value they'd otherwise put in `--header`. It's verified live against
+`GET ${API_URL}/auth/me` (Better Auth's own "who am I" route,
+`src/oauth/verify-api-key.ts`) so a typo is caught immediately. On
+success, `/token` hands that same key back as `access_token`, and every
+`/mcp` call already accepts it as `Authorization: Bearer <key>` — nothing
+about the MCP transport itself changed.
+
+The authorization code (`src/oauth/crypto.ts`) is **encrypted**, not
+signed — unlike the JWT pattern in `apps/app/lib/agent-bridge.ts`, whose
+claims are plaintext because none of them are secret. Here the payload
+*is* a secret (the real API key), so it's AES-GCM, key derived from
+`MCP_OAUTH_SECRET` via SHA-256, 5-minute expiry, with the PKCE
+`code_challenge` bound into the encrypted payload (`src/oauth/pkce.ts`
+verifies `code_verifier` against it — S256 only, no `plain`). No refresh
+tokens are issued; a revoked CRM key just means re-running `/authorize`,
+same as it would with the static-header path.
+
+**Known trade-off, not fixed**: because nothing is persisted, an
+authorization code is not single-use the way a normal OAuth code is — it
+stays valid for the full 5-minute window even after one exchange. The
+mitigations are the same ones that make the static-header path itself
+acceptable: HTTPS-only transit, a short TTL, and the code being encrypted
+rather than a plaintext credential. Making it truly single-use would mean
+persisting spent codes somewhere, which is the one piece of state this
+app was built to avoid.
+
+If `MCP_OAUTH_SECRET` is unset, every OAuth endpoint returns 503
+(`oauthConfigured()` in `src/config.ts`) — the header path above keeps
+working regardless, matching the `apps/agent/agent/lib/capabilities.ts`
+pattern for anything a self-hoster might not have configured.
 
 ## Deployment
 

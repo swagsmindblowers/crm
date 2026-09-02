@@ -11,7 +11,7 @@
 		"lint": "biome check .",
 		"start": "bun src/main.ts",
 		"start:prod": "bun dist/main.js",
-		"test": "CRM_TELEMETRY_DISABLED=1 bun test",
+		"test": "CRM_TELEMETRY_DISABLED=1 MCP_OAUTH_SECRET=test-secret-do-not-use-in-production bun test",
 		"clean": "rm -rf .turbo dist node_modules"
 	},
 	"dependencies": {

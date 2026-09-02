@@ -1,3 +1,7 @@
+const MINUTE_MS = 60_000;
+
+const API_URL = process.env.API_URL ?? "http://localhost:3001";
+
 export const MCP_CONFIG = {
 	server: {
 		name: "mylegalxpert-crm",
@@ -5,6 +9,15 @@ export const MCP_CONFIG = {
 		port: Number(process.env.PORT ?? 3002),
 	},
 	api: {
-		baseUrl: `${process.env.API_URL ?? "http://localhost:3001"}/rest`,
+		url: API_URL,
+		baseUrl: `${API_URL}/rest`,
+	},
+	oauth: {
+		secret: process.env.MCP_OAUTH_SECRET,
+		codeTtlMs: 5 * MINUTE_MS,
 	},
 } as const;
+
+export function oauthConfigured(): boolean {
+	return Boolean(MCP_CONFIG.oauth.secret);
+}
