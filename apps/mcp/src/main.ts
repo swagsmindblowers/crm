@@ -6,6 +6,7 @@ import {
 	handleAuthorizeGet,
 	handleAuthorizePost,
 	handleRegister,
+	handleRegisterProbe,
 	handleToken,
 	handleWellKnownAuthorizationServer,
 	handleWellKnownProtectedResource,
@@ -84,8 +85,9 @@ async function route(request: Request, url: URL): Promise<Response> {
 		return handleWellKnownAuthorizationServer(request);
 	}
 
-	if (url.pathname === "/register" && request.method === "POST") {
-		return handleRegister(request);
+	if (url.pathname === "/register") {
+		if (request.method === "POST") return handleRegister(request);
+		if (request.method === "GET") return handleRegisterProbe();
 	}
 
 	if (url.pathname === "/authorize") {
