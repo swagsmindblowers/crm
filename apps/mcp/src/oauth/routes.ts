@@ -29,6 +29,16 @@ export function handleWellKnownProtectedResource(request: Request): Response {
 	return Response.json(protectedResourceMetadata(origin));
 }
 
+export function handleRegisterProbe(): Response {
+	if (!oauthConfigured()) return notConfigured();
+
+	return Response.json({
+		token_endpoint_auth_methods_supported: ["none"],
+		grant_types_supported: ["authorization_code"],
+		response_types_supported: ["code"],
+	});
+}
+
 const registerBody = z.object({
 	redirect_uris: z.array(z.string()).min(1),
 	client_name: z.string().optional(),
