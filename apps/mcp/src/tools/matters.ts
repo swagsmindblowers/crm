@@ -53,6 +53,30 @@ const updateShape = {
 	expectedCloseDate: z.string().optional(),
 };
 
+const MATTER_STAGES = [
+	"ENQUIRY",
+	"INSTRUCTED",
+	"PREPARING_APPLICATION",
+	"SUBMITTED",
+	"AWAITING_DECISION",
+	"GRANTED",
+	"REFUSED",
+	"WITHDRAWN",
+] as const;
+
+const changeStageShape = {
+	id: z.string().describe("The matter's id."),
+	stage: z
+		.enum(MATTER_STAGES)
+		.describe("The pipeline stage to move the matter to."),
+	closedReason: z
+		.string()
+		.optional()
+		.describe(
+			"Why the matter closed. Only meaningful for REFUSED or WITHDRAWN.",
+		),
+};
+
 export function registerMatterTools(server: McpServer, apiKey: string): void {
 	server.registerTool(
 		"search_matters",
@@ -99,6 +123,20 @@ export function registerMatterTools(server: McpServer, apiKey: string): void {
 		async ({ id, ...data }) =>
 			toolResult(
 				await restRequest(apiKey, "PATCH", `/matters/${id}`, { data }),
+			),
+	);
+
+	server.registerTool(
+		"change_matter_stage",
+		{
+			title: "Change matter stage",
+			description:
+				"Move a matter to a different pipeline stage (the case status), e.g. from SUBMITTED to GRANTED.",
+			inputSchema: changeStageShape,
+		},
+		async ({ id, ...data }) =>
+			toolResult(
+				await restRequest(apiKey, "PATCH", `/matters/${id}/stage`, data),
 			),
 	);
 }
