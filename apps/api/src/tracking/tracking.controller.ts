@@ -179,7 +179,16 @@ export class TrackingRetentionController {
 			throw new ServiceUnavailableException("Retention is not configured.");
 		}
 
-		if (!timingSafeEquals(authorization ?? "", `Bearer ${this.secret}`)) {
+		const expected = `Bearer ${this.secret}`;
+		const received = authorization ?? "";
+
+		if (!timingSafeEquals(received, expected)) {
+			this.logger.warn({
+				message: "CRON_SECRET mismatch on tracking retention route.",
+				receivedLength: received.length,
+				expectedLength: expected.length,
+				receivedPrefix: received.slice(0, 7),
+			});
 			throw new ForbiddenException();
 		}
 

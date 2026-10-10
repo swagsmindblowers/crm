@@ -68,7 +68,16 @@ export class RatesController {
 			throw new ServiceUnavailableException("Rate refresh is not configured.");
 		}
 
-		if (!timingSafeEquals(authorization ?? "", `Bearer ${this.secret}`)) {
+		const expected = `Bearer ${this.secret}`;
+		const received = authorization ?? "";
+
+		if (!timingSafeEquals(received, expected)) {
+			this.logger.warn({
+				message: "CRON_SECRET mismatch on rates route.",
+				receivedLength: received.length,
+				expectedLength: expected.length,
+				receivedPrefix: received.slice(0, 7),
+			});
 			throw new ForbiddenException();
 		}
 
